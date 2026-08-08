@@ -1,0 +1,28 @@
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.iml
+.DS_Store
+Thumbs.db
+
+# Node / Angular Frontend
+**/node_modules/
+**/dist/
+**/.angular/
+**/.vite/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.vite/
+
+# Java / Maven Backend
+**/target/
+*.class
+backend/target/
+
+# Logs & Temp
+*.log
+*.tmp
+nohup.out
+/tmp/

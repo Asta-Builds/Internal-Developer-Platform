@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension for DB, Keycloak & RAG vector store
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: idp-postgres
+    environment:
+      POSTGRES_DB: idpdb
+      POSTGRES_USER: idpuser
+      POSTGRES_PASSWORD: idppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U idpuser -d idpdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak IAM Service (OAuth2 / OIDC Authorization Server)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: idp-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: adminpassword
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/idpdb
+      KC_DB_USERNAME: idpuser
+      KC_DB_PASSWORD: idppassword
+      KC_HTTP_PORT: 8180
+    ports:
+      - "8180:8180"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Spring Boot Core API Backend
+  idp-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: idp-backend
+    ports:
+      - "8088:8088"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/idpdb
+      SPRING_DATASOURCE_USERNAME: idpuser
+      SPRING_DATASOURCE_PASSWORD: idppassword
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/idp-realm
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  # Angular Frontend Web UI (HeroUI Design System)
+  idp-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: idp-frontend
+    ports:
+      - "4200:4200"
+    depends_on:
+      - idp-backend
+
+volumes:
+  postgres_data:
