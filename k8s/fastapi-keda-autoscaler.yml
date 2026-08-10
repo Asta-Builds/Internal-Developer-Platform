@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idp-ai-consumer
+  namespace: idp-system
+  labels:
+    app: idp-ai-consumer
+    tier: ai-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: idp-ai-consumer
+  template:
+    metadata:
+      labels:
+        app: idp-ai-consumer
+    spec:
+      containers:
+        - name: ai-consumer
+          image: idp-ai-consumer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq-service"
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: INCOMING_QUEUE
+              value: "fraud.analysis.queue"
+            - name: OUTGOING_QUEUE
+              value: "fraud.result.queue"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 384Mi
+            limits:
+              cpu: 1500m
+              memory: 1.5Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: idp-ai-consumer-service
+  namespace: idp-system
+spec:
+  type: ClusterIP
+  selector:
+    app: idp-ai-consumer
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+---
+# KEDA ScaledObject: Automatically scale AI pods from 2 to 16 based on RabbitMQ queue backlog!
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: idp-ai-consumer-keda-scaler
+  namespace: idp-system
+spec:
+  scaleTargetRef:
+    name: idp-ai-consumer
+  minReplicaCount: 2
+  maxReplicaCount: 16
+  pollingInterval: 5
+  cooldownPeriod: 60
+  triggers:
+    - type: rabbitmq
+      metadata:
+        queueName: fraud.analysis.queue
+        mode: QueueLength
+        value: "50" # Scale up +1 pod for every 50 messages in queue backlog
+        host: "amqp://guest:guest@rabbitmq-service.idp-system.svc.cluster.local:5672/"

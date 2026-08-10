@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  # PostgreSQL with pgvector extension for DB, Keycloak & RAG vector store
+  # 1. PostgreSQL 16 with pgvector extension
   postgres:
     image: pgvector/pgvector:pg16
     container_name: idp-postgres
@@ -19,7 +17,40 @@ services:
       timeout: 5s
       retries: 5
 
-  # Keycloak IAM Service (OAuth2 / OIDC Authorization Server)
+  # 2. Redis 7 High-Performance Distributed Caching Tier
+  redis:
+    image: redis:7-alpine
+    container_name: idp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 3. RabbitMQ 3.13 Message Broker with Management Web Console
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: idp-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # AMQP Protocol
+      - "15672:15672"  # Management Web UI (http://localhost:15672)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 8s
+      timeout: 5s
+      retries: 5
+
+  # 4. Keycloak IAM Service (OAuth2 / OIDC Authorization Server)
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.1
     container_name: idp-keycloak
@@ -34,11 +65,34 @@ services:
       KC_HTTP_PORT: 8180
     ports:
       - "8180:8180"
+    volumes:
+      - ./keycloak/idp-realm.json:/opt/keycloak/data/import/idp-realm.json:ro
+      - ./keycloak/theme:/opt/keycloak/themes:ro
     depends_on:
       postgres:
         condition: service_healthy
 
-  # Spring Boot Core API Backend
+  # 5. FastAPI AI Microservice Consumer (Consumes from RabbitMQ)
+  idp-ai-consumer:
+    build:
+      context: ./ai-consumer
+      dockerfile: Dockerfile
+    container_name: idp-ai-consumer
+    ports:
+      - "8000:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      INCOMING_QUEUE: fraud.analysis.queue
+      OUTGOING_QUEUE: fraud.result.queue
+      EXCHANGE_NAME: idp.direct.exchange
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  # 6. Spring Boot 3.2 Core API Backend (Producer & Orchestrator)
   idp-backend:
     build:
       context: ./backend
@@ -48,25 +102,35 @@ services:
       - "8088:8088"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/idpdb
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_DATASOURCE_USERNAME: idpuser
       SPRING_DATASOURCE_PASSWORD: idppassword
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/idp-realm
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8180/realms/idp-realm
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
-        condition: service_started
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
-  # Angular Frontend Web UI (HeroUI Design System)
+  # 7. Angular 17 Standalone Web Portal UI
   idp-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: idp-frontend
     ports:
-      - "4200:4200"
+      - "4200:80"
     depends_on:
       - idp-backend
 
 volumes:
   postgres_data:
+  redis_data:
+  rabbitmq_data:

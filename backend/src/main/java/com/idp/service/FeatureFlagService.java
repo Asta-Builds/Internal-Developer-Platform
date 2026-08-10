@@ -4,6 +4,9 @@ import com.idp.domain.FeatureFlagEntity;
 import com.idp.repository.FeatureFlagRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,12 +20,16 @@ public class FeatureFlagService {
 
     private final FeatureFlagRepository flagRepository;
     private final AuditService auditService;
+    private final RabbitTemplate rabbitTemplate;
 
+    @Cacheable(value = "feature_flags", key = "'all_flags'")
     public List<FeatureFlagEntity> getAllFlags() {
+        log.debug("[Cache Miss] Fetching feature flags from database");
         return flagRepository.findAll();
     }
 
     @Transactional
+    @CacheEvict(value = "feature_flags", allEntries = true)
     public FeatureFlagEntity createFlag(FeatureFlagEntity flag) {
         if (flag.getId() == null) {
             flag.setId("ff-" + UUID.randomUUID().toString().substring(0, 6));
@@ -30,36 +37,58 @@ public class FeatureFlagService {
         flag.setUpdatedAt(LocalDateTime.now());
         FeatureFlagEntity saved = flagRepository.save(flag);
         auditService.logAction("admin", "FEATURE_FLAG_CREATED", saved.getKey(), "Created feature flag " + saved.getKey());
+        publishFlagUpdateEvent("CREATED", saved);
         return saved;
     }
 
     @Transactional
+    @CacheEvict(value = "feature_flags", allEntries = true)
     public FeatureFlagEntity toggleFlag(String id) {
         FeatureFlagEntity flag = flagRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Feature flag not found: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Feature flag not found: " + id));
         flag.setEnabled(!flag.isEnabled());
         flag.setUpdatedAt(LocalDateTime.now());
         FeatureFlagEntity saved = flagRepository.save(flag);
         auditService.logAction("admin", "FEATURE_FLAG_TOGGLED", saved.getKey(), "Flag status changed to " + saved.isEnabled());
+        publishFlagUpdateEvent("TOGGLED", saved);
         return saved;
     }
 
     @Transactional
+    @CacheEvict(value = "feature_flags", allEntries = true)
     public FeatureFlagEntity updateRolloutPercent(String id, int rolloutPercent) {
         FeatureFlagEntity flag = flagRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Feature flag not found: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Feature flag not found: " + id));
         flag.setRolloutPercent(Math.min(100, Math.max(0, rolloutPercent)));
         flag.setUpdatedAt(LocalDateTime.now());
         FeatureFlagEntity saved = flagRepository.save(flag);
         auditService.logAction("admin", "FEATURE_FLAG_ROLLOUT_UPDATED", saved.getKey(), "Canary rollout percentage set to " + saved.getRolloutPercent() + "%");
+        publishFlagUpdateEvent("ROLLOUT_UPDATED", saved);
         return saved;
     }
 
     @Transactional
+    @CacheEvict(value = "feature_flags", allEntries = true)
     public FeatureFlagEntity updateRollout(String id, int rolloutPercent) {
         return updateRolloutPercent(id, rolloutPercent);
     }
 
+    private void publishFlagUpdateEvent(String action, FeatureFlagEntity flag) {
+        try {
+            rabbitTemplate.convertAndSend("idp.direct.exchange", "flag.updated.routing.key", Map.of(
+                    "action", action,
+                    "flagKey", flag.getKey(),
+                    "enabled", flag.isEnabled(),
+                    "rolloutPercent", flag.getRolloutPercent(),
+                    "updatedAt", LocalDateTime.now().toString()
+            ));
+            log.info("Broadcasted AMQP flag.updated event for flag key {}", flag.getKey());
+        } catch (Exception e) {
+            log.warn("Failed to publish AMQP flag.updated event: {}", e.getMessage());
+        }
+    }
+
+    @Cacheable(value = "feature_flags", key = "#key + '_' + #userId")
     public Map<String, Object> evaluateFlag(String key, String userId) {
         Optional<FeatureFlagEntity> flagOpt = flagRepository.findByKey(key);
         if (flagOpt.isEmpty()) {

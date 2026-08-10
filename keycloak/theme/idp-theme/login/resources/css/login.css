@@ -1,0 +1,404 @@
+/* ==========================================================================
+   SHADCN / UI THEME FOR KEYCLOAK (Minimalist Monochromatic Dark Mode)
+   ========================================================================== */
+
+:root {
+  --zinc-950: #09090b;
+  --zinc-900: #18181b;
+  --zinc-800: #27272a;
+  --zinc-700: #3f3f46;
+  --zinc-600: #52525b;
+  --zinc-500: #71717a;
+  --zinc-400: #a1a1aa;
+  --zinc-300: #d4d4d8;
+  --zinc-200: #e4e4e7;
+  --zinc-100: #f4f4f5;
+  --zinc-50: #fafafa;
+
+  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body.shadcn-root {
+  background-color: var(--zinc-950) !important;
+  color: var(--zinc-50) !important;
+  font-family: var(--font-sans) !important;
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Split-screen layout (Classic shadcn Authentication Example) */
+.shadcn-split-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100vh;
+  width: 100vw;
+}
+
+@media (min-width: 1024px) {
+  .shadcn-split-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Left Hero / Brand Panel */
+.shadcn-hero-panel {
+  display: none;
+  background-color: #09090b;
+  border-right: 1px solid var(--zinc-800);
+  padding: 48px;
+  position: relative;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .shadcn-hero-panel {
+    display: flex;
+  }
+}
+
+.shadcn-hero-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.shadcn-brand-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 10;
+}
+
+.shadcn-logo-icon {
+  color: var(--zinc-50);
+}
+
+.shadcn-brand-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--zinc-50);
+}
+
+.shadcn-hero-footer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shadcn-quote-card {
+  max-width: 480px;
+}
+
+.shadcn-quote-text {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--zinc-200);
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+
+.shadcn-quote-author .author-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--zinc-100);
+}
+
+.shadcn-quote-author .author-title {
+  font-size: 0.8rem;
+  color: var(--zinc-500);
+}
+
+.shadcn-compliance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--zinc-800);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--zinc-400);
+  font-family: var(--font-mono);
+  width: fit-content;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+/* Right Auth Container */
+.shadcn-auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background: var(--zinc-950);
+}
+
+.shadcn-auth-container {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.shadcn-auth-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.shadcn-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.shadcn-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--zinc-50);
+}
+
+.shadcn-subtitle {
+  font-size: 0.875rem;
+  color: var(--zinc-400);
+  line-height: 1.4;
+}
+
+/* Alerts */
+.shadcn-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.815rem;
+  margin-bottom: 16px;
+}
+
+.shadcn-alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* Form Fields */
+.shadcn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shadcn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shadcn-label {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--zinc-200);
+}
+
+.shadcn-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shadcn-sublink {
+  font-size: 0.75rem;
+  color: var(--zinc-500);
+  font-family: var(--font-mono);
+}
+
+.shadcn-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.shadcn-input {
+  height: 38px !important;
+  width: 100% !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--zinc-800) !important;
+  background-color: rgba(24, 24, 27, 0.6) !important;
+  padding: 0 12px !important;
+  font-size: 0.875rem !important;
+  color: var(--zinc-50) !important;
+  font-family: var(--font-sans) !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shadcn-input:focus {
+  border-color: var(--zinc-400) !important;
+  box-shadow: 0 0 0 1px var(--zinc-400) !important;
+  background-color: var(--zinc-900) !important;
+}
+
+.shadcn-input::placeholder {
+  color: var(--zinc-600) !important;
+}
+
+.shadcn-eye-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--zinc-500);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shadcn-eye-btn:hover {
+  color: var(--zinc-300);
+}
+
+.shadcn-checkbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.815rem;
+  color: var(--zinc-400);
+}
+
+.shadcn-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Primary Button (shadcn style: Solid White with Black Text in Dark Mode) */
+.shadcn-btn-primary {
+  height: 38px !important;
+  width: 100% !important;
+  border-radius: 6px !important;
+  background-color: var(--zinc-50) !important;
+  color: var(--zinc-950) !important;
+  border: none !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  font-family: var(--font-sans) !important;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.shadcn-btn-primary:hover {
+  background-color: rgba(250, 250, 250, 0.9) !important;
+}
+
+/* Divider */
+.shadcn-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0 18px 0;
+  gap: 12px;
+}
+
+.shadcn-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--zinc-800);
+}
+
+.shadcn-divider-text {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--zinc-500);
+  font-weight: 600;
+}
+
+/* Personas Outline Grid */
+.shadcn-personas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shadcn-persona-btn {
+  background: rgba(24, 24, 27, 0.4);
+  border: 1px solid var(--zinc-800);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.shadcn-persona-btn:hover {
+  background: var(--zinc-900);
+  border-color: var(--zinc-700);
+}
+
+.persona-btn-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.persona-name {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--zinc-200);
+}
+
+.persona-desc {
+  font-size: 0.72rem;
+  color: var(--zinc-500);
+  font-family: var(--font-mono);
+}
+
+.shadcn-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.badge-admin { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+.badge-lead { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+.badge-dev { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+.badge-viewer { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25); }
+
+.shadcn-terms {
+  font-size: 0.75rem;
+  color: var(--zinc-500);
+  text-align: center;
+  margin-top: 24px;
+  line-height: 1.4;
+}

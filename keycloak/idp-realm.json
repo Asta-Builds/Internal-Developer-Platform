@@ -1,0 +1,253 @@
+{
+  "id": "idp-realm",
+  "realm": "idp-realm",
+  "enabled": true,
+  "displayName": "Internal Developer Platform (IDP)",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Internal Developer Platform</span></div>",
+  "loginTheme": "idp-theme",
+  "notBefore": 0,
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 3600,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "roles": {
+    "realm": [
+      {
+        "id": "role-admin",
+        "name": "ADMIN",
+        "description": "Full Platform Administrator with full access to Scaffolding, Security, and CloudOps",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "idp-realm"
+      },
+      {
+        "id": "role-tech-lead",
+        "name": "TECH_LEAD",
+        "description": "Tech Lead role with permissions to scaffold, manage feature toggles, and deploy staging",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "idp-realm"
+      },
+      {
+        "id": "role-developer",
+        "name": "DEVELOPER",
+        "description": "Developer role with access to scaffold microservices and view observability logs",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "idp-realm"
+      },
+      {
+        "id": "role-viewer",
+        "name": "VIEWER",
+        "description": "Read-only access to the microservice catalog, metrics, and architecture diagrams",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "idp-realm"
+      }
+    ],
+    "client": {
+      "idp-frontend": [],
+      "idp-backend": []
+    }
+  },
+  "groups": [
+    {
+      "name": "Engineering Platform",
+      "path": "/Engineering Platform",
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "name": "Feature Teams",
+      "path": "/Feature Teams",
+      "realmRoles": ["DEVELOPER"]
+    }
+  ],
+  "defaultRoles": [
+    "VIEWER",
+    "offline_access",
+    "uma_authorization"
+  ],
+  "clients": [
+    {
+      "id": "idp-frontend-client",
+      "clientId": "idp-frontend",
+      "name": "IDP Angular Frontend SPA",
+      "description": "Public OAuth2 / OIDC Client for IDP Single Page Application with PKCE support",
+      "rootUrl": "http://localhost:4200",
+      "baseUrl": "http://localhost:4200",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4200",
+        "http://localhost:8088/*"
+      ],
+      "webOrigins": [
+        "+",
+        "http://localhost:4200"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": true,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "roles",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        },
+        {
+          "name": "preferred username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "id": "idp-backend-client",
+      "clientId": "idp-backend",
+      "name": "IDP Spring Boot Resource Server",
+      "description": "Bearer-only Resource Server API verifying RS256 JWT tokens",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "id": "usr-admin-01",
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Platform",
+      "lastName": "Administrator",
+      "email": "admin@company.internal",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN",
+        "TECH_LEAD",
+        "DEVELOPER",
+        "VIEWER"
+      ]
+    },
+    {
+      "id": "usr-lead-02",
+      "username": "tech_lead",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Alex",
+      "lastName": "Vance",
+      "email": "lead@company.internal",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "leadpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "TECH_LEAD",
+        "DEVELOPER",
+        "VIEWER"
+      ]
+    },
+    {
+      "id": "usr-dev-03",
+      "username": "developer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Engineer",
+      "email": "dev@company.internal",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "DEVELOPER",
+        "VIEWER"
+      ]
+    },
+    {
+      "id": "usr-viewer-04",
+      "username": "viewer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Auditor",
+      "lastName": "Observer",
+      "email": "viewer@company.internal",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "viewerpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "VIEWER"
+      ]
+    }
+  ]
+}

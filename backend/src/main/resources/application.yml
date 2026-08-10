@@ -5,10 +5,10 @@ spring:
   application:
     name: idp-backend
   datasource:
-    url: jdbc:h2:mem:idpdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
-    driverClassName: org.h2.Driver
-    username: sa
-    password: 
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:idpdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:${SPRING_DATASOURCE_DRIVER:org.h2.Driver}}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   h2:
     console:
       enabled: true
@@ -16,15 +16,59 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    baseline-version: 0
     locations: classpath:db/migration
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
+
+  # Distributed Redis Configuration
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  # RabbitMQ Broker Configuration
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        concurrency: 2
+        max-concurrency: 10
+        prefetch: 50
+        acknowledge-mode: auto
+
+  # Spring Cache Configuration
+  cache:
+    type: ${SPRING_CACHE_TYPE:caffeine}
+    cache-names:
+      - service_catalog
+      - feature_flags
+      - rbac_matrix
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=15m
+
+# Custom IDP Scaling Queue Properties
+idp:
+  queues:
+    fraud-analysis: fraud.analysis.queue
+    fraud-result: fraud.result.queue
+    audit-stream: audit.event.queue
+    exchange: idp.direct.exchange
+    routing-key: fraud.analysis.routing.key
 
 logging:
   level:
     root: INFO
-    com.idp: DEBUG
+    com.idp: INFO
     org.flywaydb: INFO
+    org.springframework.cache: DEBUG

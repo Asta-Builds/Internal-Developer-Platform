@@ -1,4 +1,4 @@
-<div class="app-root">
+<div *ngIf="isAuthenticated()" class="app-root">
   <!-- Top Navigation Bar -->
   <header class="navbar">
     <div class="navbar-brand">
@@ -11,31 +11,69 @@
       </div>
       <div>
         <div class="brand-title">Internal Developer Platform</div>
-        <div style="font-size:0.75rem; color:var(--text-dim);">Enterprise Service Mesh &amp; Engineering Portal</div>
+        <div style="font-size:0.72rem; color:var(--heroui-text-dim);">Enterprise Service Mesh &amp; Keycloak IAM Portal</div>
       </div>
-      <span class="brand-badge">IDP Core v3.2</span>
+      <span class="brand-badge">IDP Live v3.2</span>
     </div>
 
-    <div class="navbar-center">
-      <div class="search-box">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="Search microservices, APIs, teams, or tech stacks..." />
+    <!-- Live Traffic Generator Control Bar -->
+    <div class="traffic-controller">
+      <span class="traffic-label">
+        <span class="pulse-dot" [ngClass]="{
+          'pulse-green': catalogService.trafficModeSignal() === 'NORMAL',
+          'pulse-yellow': catalogService.trafficModeSignal() === 'SPIKE',
+          'pulse-red': catalogService.trafficModeSignal() === 'CHAOS_ERROR' || catalogService.trafficModeSignal() === 'CHAOS_LATENCY'
+        }"></span>
+        Traffic Mode:
+      </span>
+      <div class="traffic-btn-group">
+        <button (click)="setTrafficMode('NORMAL')" [class.active]="catalogService.trafficModeSignal() === 'NORMAL'" class="btn-traffic btn-normal" title="140 req/s, 14ms latency">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Normal
+        </button>
+        <button (click)="setTrafficMode('SPIKE')" [class.active]="catalogService.trafficModeSignal() === 'SPIKE'" class="btn-traffic btn-spike" title="1,000+ req/s, triggers auto-scaling">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Traffic Spike
+        </button>
+        <button (click)="setTrafficMode('CHAOS_LATENCY')" [class.active]="catalogService.trafficModeSignal() === 'CHAOS_LATENCY'" class="btn-traffic btn-latency" title="380ms slow database simulation">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Latency Chaos
+        </button>
+        <button (click)="setTrafficMode('CHAOS_ERROR')" [class.active]="catalogService.trafficModeSignal() === 'CHAOS_ERROR'" class="btn-traffic btn-error" title="15% HTTP 500 error injection">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Error Injection
+        </button>
       </div>
     </div>
 
     <div class="navbar-actions">
+      <button (click)="setTab('keycloak')" class="btn btn-outline btn-sm" style="border-color:rgba(139,92,246,0.4); color:#c4b5fd;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        Keycloak SSO
+      </button>
+
       <button (click)="openScaffoldModal()" class="btn btn-primary btn-sm">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
         New Microservice
       </button>
 
-      <div (click)="openKeycloakLogin()" class="user-profile-badge" title="Click to switch Keycloak SSO Role">
+      <div (click)="setTab('keycloak')" class="user-profile-badge" title="Click to view Keycloak IAM Authentication Profile">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#818cf8;">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -45,11 +83,19 @@
           <div style="font-size:0.68rem; color:#34d399; font-weight:600;">{{ currentUser().role }}</div>
         </div>
       </div>
+
+      <button (click)="logout()" class="btn btn-outline btn-sm" style="border-color:rgba(239,68,68,0.3); color:#f87171;" title="Lock Platform &amp; Sign Out">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        Sign Out
+      </button>
     </div>
   </header>
 
   <div class="main-layout">
-    <!-- Sidebar -->
+    <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="sidebar-menu">
         <button (click)="setTab('catalog')" [class.active]="activeTab() === 'catalog'" class="menu-item">
@@ -87,6 +133,17 @@
           Live Observability &amp; SSE
         </button>
 
+        <button (click)="setTab('topology')" [class.active]="activeTab() === 'topology'" class="menu-item" style="color:#38bdf8;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#38bdf8;">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+          Live Topology Mesh
+        </button>
+
         <button (click)="setTab('devops')" [class.active]="activeTab() === 'devops'" class="menu-item">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -115,39 +172,58 @@
           </svg>
           IDP Copilot (RAG AI)
         </button>
+
+        <button (click)="setTab('keycloak')" [class.active]="activeTab() === 'keycloak'" class="menu-item" style="border-top:1px solid rgba(255,255,255,0.06); margin-top:4px; color:#c4b5fd;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#a78bfa;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Keycloak IAM &amp; SSO
+        </button>
       </div>
 
-      <div style="border-top:1px solid var(--border-color); padding-top:16px;">
-        <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:8px;">Connected Realm</div>
-        <div style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--text-muted);">
-          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
-          <span>idp-realm (Keycloak)</span>
+      <div style="border-top:1px solid var(--heroui-border); padding-top:16px;">
+        <div style="font-size:0.72rem; color:var(--heroui-text-dim); margin-bottom:8px;">Live Telemetry Pulse</div>
+        <div style="display:flex; flex-direction:column; gap:6px; font-size:0.76rem;">
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--heroui-text-muted);">Throughput:</span>
+            <strong style="color:#38bdf8;">{{ catalogService.telemetrySignal()?.rps }} req/s</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--heroui-text-muted);">P95 Latency:</span>
+            <strong [style.color]="catalogService.telemetrySignal()?.p95LatencyMs > 100 ? '#ef4444' : '#34d399'">
+              {{ catalogService.telemetrySignal()?.p95LatencyMs }} ms
+            </strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--heroui-text-muted);">Cluster Pods:</span>
+            <strong style="color:#34d399;">{{ catalogService.telemetrySignal()?.healthyPods }} / {{ catalogService.telemetrySignal()?.totalPods }}</strong>
+          </div>
         </div>
       </div>
     </aside>
 
-    <!-- Main Content Panels -->
+    <!-- Main Content Area -->
     <main class="content-area">
       <!-- ================= TAB 1: SERVICE CATALOG ================= -->
       <section *ngIf="activeTab() === 'catalog'">
         <div class="pane-header">
           <div>
-            <h1 class="pane-title">Service Catalog &amp; Dependency Graph</h1>
-            <p class="pane-subtitle">Central inventory of registered microservices, exposed APIs, and upstream/downstream topologies</p>
+            <h1 class="pane-title">Service Catalog &amp; Live Service Mesh</h1>
+            <p class="pane-subtitle">Real-time inventory of active microservices with interactive scaling, rolling restarts, and chaos fault injection</p>
           </div>
           <div style="display:flex; gap:12px;">
             <button (click)="openGraphModal()" class="btn btn-outline btn-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="18" cy="5" r="3"></circle>
                 <circle cx="6" cy="12" r="3"></circle>
                 <circle cx="18" cy="19" r="3"></circle>
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
               </svg>
-              Topology Graph
+              Live Topology Graph
             </button>
             <button (click)="openScaffoldModal()" class="btn btn-primary btn-sm">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
@@ -156,85 +232,109 @@
           </div>
         </div>
 
-        <!-- Aggregate Statistics Grid -->
+        <!-- Live Telemetry Stat Cards -->
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-icon-wrapper" style="background:rgba(99, 102, 241, 0.15); color:#818cf8;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
                 <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
               </svg>
             </div>
             <div>
-              <div class="stat-val">{{ catalogService.statsSignal()?.totalServices || catalogService.servicesSignal().length }}</div>
+              <div class="stat-val">{{ catalogService.servicesSignal().length }}</div>
               <div class="stat-lbl">Active Services</div>
             </div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon-wrapper" style="background:rgba(52, 211, 153, 0.15); color:#34d399;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
+            <div class="stat-icon-wrapper" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 2"></polyline>
               </svg>
             </div>
-            <div>
-              <div class="stat-val">{{ catalogService.statsSignal()?.totalApis || 8 }}</div>
-              <div class="stat-lbl">Exposed Endpoints</div>
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <div class="stat-val">{{ catalogService.telemetrySignal()?.rps }} req/s</div>
+                <div>
+                  <svg width="60" height="18">
+                    <polyline fill="none" stroke="#38bdf8" stroke-width="2" [attr.points]="'0,14 10,10 20,13 30,7 40,9 50,4 60,8'" />
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-lbl">Live Traffic Throughput</div>
             </div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon-wrapper" style="background:rgba(251, 191, 36, 0.15); color:#fbbf24;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="18" cy="5" r="3"></circle>
-                <circle cx="6" cy="12" r="3"></circle>
-                <circle cx="18" cy="19" r="3"></circle>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            <div class="stat-icon-wrapper" style="background:rgba(52, 211, 153, 0.15); color:#34d399;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
             </div>
             <div>
-              <div class="stat-val">{{ catalogService.statsSignal()?.totalDependencies || 6 }}</div>
-              <div class="stat-lbl">Service Links</div>
+              <div class="stat-val">{{ catalogService.telemetrySignal()?.healthyPods }} / {{ catalogService.telemetrySignal()?.totalPods }}</div>
+              <div class="stat-lbl">Healthy Replicas</div>
             </div>
           </div>
 
           <div class="stat-card">
             <div class="stat-icon-wrapper" style="background:rgba(236, 72, 153, 0.15); color:#f472b6;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
             </div>
-            <div>
-              <div class="stat-val">{{ catalogService.statsSignal()?.totalOwnerTeams || catalogService.ownerTeamsSignal().length }}</div>
-              <div class="stat-lbl">Codeowner Teams</div>
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <div class="stat-val" [style.color]="catalogService.telemetrySignal()?.p95LatencyMs > 100 ? '#ef4444' : '#f472b6'">
+                  {{ catalogService.telemetrySignal()?.p95LatencyMs }} ms
+                </div>
+                <div>
+                  <svg width="60" height="18">
+                    <polyline fill="none" stroke="#f472b6" stroke-width="2" [attr.points]="'0,16 10,12 20,14 30,10 40,13 50,6 60,10'" />
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-lbl">P95 Response Latency</div>
             </div>
           </div>
         </div>
 
-        <!-- Filter Controls -->
-        <div style="display:flex; gap:14px; margin-bottom:24px; align-items:center;">
-          <select [(ngModel)]="selectedTechStack" (ngModelChange)="onFilterChange()" class="select-input">
-            <option value="ALL">All Tech Stacks</option>
-            <option value="SPRING_BOOT">Spring Boot</option>
-            <option value="ANGULAR">Angular</option>
-            <option value="GO">Go Microservice</option>
-            <option value="PYTHON">Python FastAPI</option>
-          </select>
+        <!-- Filter Controls & Search -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div class="search-box" style="width:300px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--heroui-text-dim);">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="Filter microservices..." />
+            </div>
 
-          <select [(ngModel)]="selectedOwnerTeam" (ngModelChange)="onFilterChange()" class="select-input">
-            <option value="ALL">All Owner Teams</option>
-            <option *ngFor="let team of catalogService.ownerTeamsSignal()" [value]="team">{{ team }}</option>
-          </select>
+            <select [(ngModel)]="selectedTechStack" (ngModelChange)="onFilterChange()" class="select-input">
+              <option value="ALL">All Tech Stacks</option>
+              <option value="SPRING_BOOT">Spring Boot 3.2</option>
+              <option value="ANGULAR">Angular Standalone</option>
+              <option value="GO">Go Microservice</option>
+              <option value="PYTHON">Python FastAPI</option>
+            </select>
+
+            <select [(ngModel)]="selectedOwnerTeam" (ngModelChange)="onFilterChange()" class="select-input">
+              <option value="ALL">All Codeowner Teams</option>
+              <option *ngFor="let team of catalogService.ownerTeamsSignal()" [value]="team">{{ team }}</option>
+            </select>
+          </div>
+
+          <div style="font-size:0.8rem; color:var(--heroui-text-dim);">
+            Showing <strong>{{ catalogService.servicesSignal().length }}</strong> registered microservices
+          </div>
         </div>
 
         <!-- Services Cards Grid -->
         <div class="catalog-grid">
-          <div *ngFor="let srv of catalogService.servicesSignal()" (click)="openServiceDetail(srv)" class="service-card">
+          <div *ngFor="let srv of catalogService.servicesSignal()" (click)="openServiceDetail(srv)" class="service-card" [class.card-degraded]="srv.status === 'DEGRADED'" [class.card-scaling]="srv.status === 'SCALING'">
             <div>
               <div class="card-top">
                 <span class="tech-badge" [ngClass]="{
@@ -243,8 +343,14 @@
                   'badge-go': srv.techStack === 'GO',
                   'badge-python': srv.techStack === 'PYTHON'
                 }">{{ srv.techStack }}</span>
-                <span style="font-size:0.75rem; color:#34d399; font-weight:600; display:flex; align-items:center; gap:4px;">
-                  <span style="width:6px; height:6px; border-radius:50%; background:#34d399;"></span>
+                
+                <span class="service-status-pill" [ngClass]="{
+                  'status-active': srv.status === 'ACTIVE',
+                  'status-scaling': srv.status === 'SCALING',
+                  'status-restarting': srv.status === 'RESTARTING',
+                  'status-degraded': srv.status === 'DEGRADED'
+                }">
+                  <span class="pulse-dot"></span>
                   {{ srv.status }}
                 </span>
               </div>
@@ -254,13 +360,57 @@
             </div>
 
             <div>
-              <div style="display:flex; gap:8px; margin-bottom:12px; font-size:0.75rem;">
-                <span style="background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:4px; color:#cbd5e1;">
-                  {{ srv.exposedApis?.length || 0 }} APIs
-                </span>
-                <span style="background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:4px; color:#cbd5e1;">
-                  {{ srv.dependencies?.length || 0 }} Upstream Links
-                </span>
+              <!-- Microservice Live Telemetry Metrics -->
+              <div class="service-telemetry-row">
+                <div class="telemetry-chip">
+                  <span class="chip-label">Replicas</span>
+                  <div class="replica-control-group" (click)="$event.stopPropagation()">
+                    <button (click)="scaleService(srv, -1, $event)" class="btn-rep" [disabled]="(srv.replicas || 2) <= 1" title="Scale down">-</button>
+                    <span class="chip-val">{{ srv.replicas || 2 }}</span>
+                    <button (click)="scaleService(srv, 1, $event)" class="btn-rep" [disabled]="(srv.replicas || 2) >= 10" title="Scale up">+</button>
+                  </div>
+                </div>
+
+                <div class="telemetry-chip">
+                  <span class="chip-label">CPU Load</span>
+                  <span class="chip-val">{{ srv.cpuUsage || 3.4 }}%</span>
+                </div>
+
+                <div class="telemetry-chip">
+                  <span class="chip-label">Throughput</span>
+                  <span class="chip-val" style="color:#38bdf8;">{{ srv.rps || 45 }} rps</span>
+                </div>
+              </div>
+
+              <!-- Quick Action Lifecycle Bar -->
+              <div class="service-actions-bar" (click)="$event.stopPropagation()">
+                <button (click)="restartService(srv, $event)" class="btn-action-sm btn-action-restart" title="Trigger zero-downtime rolling restart">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  Restart
+                </button>
+
+                <button *ngIf="srv.status !== 'DEGRADED'" (click)="degradeService(srv, $event)" class="btn-action-sm btn-action-chaos" title="Inject chaos fault">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  Chaos
+                </button>
+
+                <button *ngIf="srv.status === 'DEGRADED'" (click)="healService(srv, $event)" class="btn-action-sm btn-action-heal" title="Restore service to healthy status">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  Heal
+                </button>
+
+                <button (click)="triggerHealthProbe(srv, $event)" class="btn-action-sm" title="Ping live health probe">
+                  Ping
+                </button>
               </div>
 
               <div class="card-meta">
@@ -277,7 +427,7 @@
         <div class="pane-header">
           <div>
             <h1 class="pane-title">Project Scaffolder &amp; Golden Path Creator</h1>
-            <p class="pane-subtitle">Bootstrap a production-ready microservice in 2 clicks with Git repository, CI/CD pipeline and K8s manifests</p>
+            <p class="pane-subtitle">Bootstrap a production-ready microservice with Git repository, CI/CD pipeline, and automatic catalog registration</p>
           </div>
         </div>
 
@@ -285,21 +435,21 @@
           <div *ngIf="!currentJob()">
             <div style="display:flex; flex-direction:column; gap:18px;">
               <div>
-                <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">
+                <label style="font-size:0.85rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
                   Microservice Name
                 </label>
                 <input type="text" [(ngModel)]="scaffoldForm.name" placeholder="e.g. Order Settlement Service" class="text-input" style="width:100%;" />
               </div>
 
               <div>
-                <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">
+                <label style="font-size:0.85rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
                   Description &amp; Domain Responsibilities
                 </label>
                 <input type="text" [(ngModel)]="scaffoldForm.description" placeholder="Short summary of domain logic, event streams, and database schemas" class="text-input" style="width:100%;" />
               </div>
 
               <div>
-                <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">
+                <label style="font-size:0.85rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
                   Golden Template Stack
                 </label>
                 <select [(ngModel)]="scaffoldForm.stackTemplate" class="select-input" style="width:100%;">
@@ -311,7 +461,7 @@
               </div>
 
               <div>
-                <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">
+                <label style="font-size:0.85rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
                   Codeowner Engineering Team
                 </label>
                 <input type="text" [(ngModel)]="scaffoldForm.ownerTeam" placeholder="e.g. Equipe Platform" class="text-input" style="width:100%;" />
@@ -320,7 +470,7 @@
 
             <div style="display:flex; justify-content:flex-end; gap:14px; margin-top:32px;">
               <button (click)="submitScaffold()" [disabled]="isScaffoldingRunning() || !scaffoldForm.name" class="btn btn-primary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
                 Generate &amp; Register Microservice
@@ -347,15 +497,21 @@
                   <div class="terminal-dot" style="background:#f59e0b;"></div>
                   <div class="terminal-dot" style="background:#10b981;"></div>
                 </div>
-                <div style="font-size:0.75rem; color:var(--text-dim);">Scaffolding Engine Console — Job: {{ currentJob()?.id }}</div>
+                <div style="font-size:0.75rem; color:var(--heroui-text-dim);">Scaffolding Engine Console — Job: {{ currentJob()?.id }}</div>
               </div>
               <div class="terminal-body" style="height:220px;">
-                <pre style="font-family:inherit; white-space:pre-wrap;">{{ currentJob()?.stepLogs }}</pre>
+                <pre style="font-family:inherit; white-space:pre-wrap; color:#a7f3d0;">{{ currentJob()?.stepLogs }}</pre>
               </div>
             </div>
 
             <div *ngIf="currentJob()?.status === 'COMPLETED'" style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:#34d399; font-weight:600; font-size:0.9rem;">Service successfully scaffolded and added to catalog!</span>
+              <span style="color:#34d399; font-weight:600; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Service successfully scaffolded and added to catalog!
+              </span>
               <button (click)="closeScaffoldModal(); setTab('catalog')" class="btn btn-primary">
                 View in Service Catalog &rarr;
               </button>
@@ -368,9 +524,16 @@
       <section *ngIf="activeTab() === 'feature-flags'">
         <div class="pane-header">
           <div>
-            <h1 class="pane-title">Feature Flags &amp; Canary Release Rollouts</h1>
-            <p class="pane-subtitle">Instant feature toggle controls with hash-based percentage traffic allocation and progressive delivery</p>
+            <h1 class="pane-title">Feature Flags &amp; Live Canary Rollouts</h1>
+            <p class="pane-subtitle">Instant toggle adjustments, batch 100-user MD5 hash cohort evaluator, and dynamic progressive delivery</p>
           </div>
+          <button (click)="openNewFlagModal()" class="btn btn-primary btn-sm">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Create Feature Flag
+          </button>
         </div>
 
         <div class="table-container" style="margin-bottom:32px;">
@@ -380,9 +543,9 @@
                 <th>Feature Toggle Key</th>
                 <th>Target Team</th>
                 <th>Description</th>
-                <th>Status</th>
-                <th>Canary Rollout</th>
-                <th>Action</th>
+                <th>Toggle Status</th>
+                <th>Canary Rollout Slider</th>
+                <th>Batch Evaluation</th>
               </tr>
             </thead>
             <tbody>
@@ -403,8 +566,8 @@
                   </div>
                 </td>
                 <td>
-                  <button (click)="canaryKey.set(flag.key); runCanaryTest()" class="btn btn-outline btn-sm">
-                    Simulate Hash
+                  <button (click)="canaryKey.set(flag.key); runBatchCanaryTest()" class="btn btn-outline btn-sm">
+                    Simulate Cohort
                   </button>
                 </td>
               </tr>
@@ -412,29 +575,49 @@
           </table>
         </div>
 
-        <!-- Canary Release Evaluation Sandbox -->
-        <div class="glass-panel" style="max-width:700px;">
-          <h3 style="font-family:var(--font-heading); margin-bottom:14px; font-size:1.15rem;">Canary Release Hash Evaluator</h3>
-          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:18px;">
-            Simulate how deterministic MD5 hash bucketing evaluates whether a specific user ID or tenant receives the canary feature.
-          </p>
-
-          <div style="display:flex; gap:12px; margin-bottom:18px;">
-            <input type="text" [(ngModel)]="canaryUserId" placeholder="User or Tenant ID (e.g. user-1042)" class="text-input" style="flex:1;" />
-            <button (click)="runCanaryTest()" class="btn btn-primary">Evaluate Rollout</button>
+        <!-- Dynamic Batch 100-User Canary Evaluation Sandbox -->
+        <div class="glass-panel" style="margin-bottom:28px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div>
+              <h3 style="font-family:var(--font-heading); font-size:1.15rem;">Batch 100-User MD5 Canary Hash Distribution</h3>
+              <p style="font-size:0.85rem; color:var(--heroui-text-muted);">
+                Simulates real-world deterministic hash bucketing across 100 sample user tenants for key: <code style="color:#818cf8;">{{ canaryKey() }}</code>
+              </p>
+            </div>
+            <button (click)="runBatchCanaryTest()" class="btn btn-outline btn-sm">Re-evaluate 100 Users</button>
           </div>
 
-          <div *ngIf="canaryResult()" style="background:#0a0e17; border:1px solid var(--border-color); border-radius:8px; padding:16px; font-family:var(--font-code); font-size:0.85rem;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-              <span>Key: <strong>{{ canaryResult()?.key }}</strong></span>
-              <span>Evaluated User: <strong>{{ canaryResult()?.userId }}</strong></span>
+          <div *ngIf="batchCanaryResult()">
+            <!-- Distribution Progress Bar -->
+            <div style="margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:6px;">
+                <span style="color:#34d399; font-weight:700; display:flex; align-items:center; gap:6px;">
+                  <span class="pulse-dot pulse-green"></span>
+                  Canary V2 ({{ batchCanaryResult()?.enabledPercentage }}% — {{ batchCanaryResult()?.enabledCount }} Users)
+                </span>
+                <span style="color:#94a3b8; font-weight:700; display:flex; align-items:center; gap:6px;">
+                  <span class="pulse-dot" style="background:#64748b;"></span>
+                  Baseline V1 ({{ 100 - (batchCanaryResult()?.enabledPercentage || 0) }}% — {{ batchCanaryResult()?.disabledCount }} Users)
+                </span>
+              </div>
+              <div style="width:100%; height:14px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden; display:flex;">
+                <div [style.width.%]="batchCanaryResult()?.enabledPercentage" style="background:#10b981; transition:width 0.4s ease;"></div>
+                <div [style.width.%]="100 - (batchCanaryResult()?.enabledPercentage || 0)" style="background:#475569; transition:width 0.4s ease;"></div>
+              </div>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-              <span>MD5 Bucket Score: <strong>{{ canaryResult()?.hashScore }} / 100</strong></span>
-              <span>Threshold: <strong>{{ canaryResult()?.threshold }}%</strong></span>
-            </div>
-            <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); color:#34d399; font-weight:700;">
-              Result: {{ canaryResult()?.variant || 'CANARY_ACTIVE' }} (Feature {{ canaryResult()?.enabled ? 'ENABLED' : 'DISABLED' }} for this user)
+
+            <!-- Sample User Cohort Grid -->
+            <div style="font-size:0.8rem; color:var(--heroui-text-dim); margin-bottom:8px;">Live Sample Cohort (First 10 Tenants):</div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
+              <div *ngFor="let sample of batchCanaryResult()?.samples" style="background:var(--heroui-content2); border:1px solid var(--heroui-border); border-radius:var(--heroui-radius-xs); padding:8px 12px; font-family:var(--font-code); font-size:0.75rem;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span>{{ sample.userId }}</span>
+                  <span [style.color]="sample.enabled ? '#34d399' : '#94a3b8'" style="font-weight:700;">
+                    {{ sample.variant }}
+                  </span>
+                </div>
+                <div style="color:var(--heroui-text-dim); font-size:0.7rem;">Score: {{ sample.hashScore }} / Threshold: {{ batchCanaryResult()?.threshold }}%</div>
+              </div>
             </div>
           </div>
         </div>
@@ -444,15 +627,18 @@
       <section *ngIf="activeTab() === 'observability'">
         <div class="pane-header">
           <div>
-            <h1 class="pane-title">Observability &amp; Real-Time SSE Streaming</h1>
-            <p class="pane-subtitle">Live Prometheus cluster telemetry, service health checks, and Server-Sent Events log streaming</p>
+            <h1 class="pane-title">Observability &amp; Continuous SSE Terminal</h1>
+            <p class="pane-subtitle">Live Prometheus cluster telemetry, real-time log event stream, and continuous diagnostic events</p>
           </div>
           <div style="display:flex; gap:10px;">
+            <button (click)="triggerTestLog()" class="btn btn-outline btn-sm">Emit Test Event</button>
             <button (click)="toggleLogPause()" class="btn btn-outline btn-sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect *ngIf="!isStreamingPaused()" x="6" y="4" width="4" height="16"></rect>
-                <rect *ngIf="!isStreamingPaused()" x="14" y="4" width="4" height="16"></rect>
-                <polygon *ngIf="isStreamingPaused()" points="5 3 19 12 5 21 5 3"></polygon>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" *ngIf="isStreamingPaused()">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" *ngIf="!isStreamingPaused()">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
               </svg>
               {{ isStreamingPaused() ? 'Resume Stream' : 'Pause Stream' }}
             </button>
@@ -460,69 +646,43 @@
           </div>
         </div>
 
-        <!-- Metrics Snapshot Grid -->
-        <div class="stats-grid" style="margin-bottom:24px;">
-          <div class="stat-card">
-            <div class="stat-icon-wrapper" style="background:rgba(52, 211, 153, 0.15); color:#34d399;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-val">{{ catalogService.telemetrySignal()?.healthyPods || 14 }} / {{ catalogService.telemetrySignal()?.totalPods || 14 }}</div>
-              <div class="stat-lbl">Healthy Pods</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon-wrapper" style="background:rgba(99, 102, 241, 0.15); color:#818cf8;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                <line x1="8" y1="21" x2="16" y2="21"></line>
-                <line x1="12" y1="17" x2="12" y2="21"></line>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-val">{{ catalogService.telemetrySignal()?.avgCpuUsagePercent || 4.8 }}%</div>
-              <div class="stat-lbl">Avg Cluster CPU</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon-wrapper" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <path d="M16 10a4 4 0 0 1-8 0"></path>
-              </svg>
-            </div>
-            <div>
-              <div class="stat-val">{{ catalogService.telemetrySignal()?.avgMemoryUsageMb || 185 }} MB</div>
-              <div class="stat-lbl">Avg Memory Footprint</div>
-            </div>
-          </div>
-        </div>
-
         <!-- Real-Time SSE Log Streaming Terminal -->
-        <div class="terminal-window">
+        <div class="terminal-window" style="margin-bottom:28px;">
           <div class="terminal-header">
             <div class="terminal-dots">
               <div class="terminal-dot" style="background:#ef4444;"></div>
               <div class="terminal-dot" style="background:#f59e0b;"></div>
               <div class="terminal-dot" style="background:#10b981;"></div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-muted);">
-              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
-              <span>SSE Stream: <strong>/api/v1/telemetry/logs/stream</strong></span>
+            
+            <div style="display:flex; align-items:center; gap:14px; flex:1; margin-left:14px;">
+              <div style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--heroui-text-muted);">
+                <span class="pulse-dot pulse-green"></span>
+                <span>Live Event Stream: <strong>/api/v1/telemetry/logs/stream</strong></span>
+              </div>
+
+              <!-- Terminal Level Filters -->
+              <div class="log-filter-pills">
+                <button (click)="logFilterLevel.set('ALL')" [class.active]="logFilterLevel() === 'ALL'" class="pill-btn">ALL</button>
+                <button (click)="logFilterLevel.set('ERROR')" [class.active]="logFilterLevel() === 'ERROR'" class="pill-btn pill-error">ERROR</button>
+                <button (click)="logFilterLevel.set('WARN')" [class.active]="logFilterLevel() === 'WARN'" class="pill-btn pill-warn">WARN</button>
+                <button (click)="logFilterLevel.set('INFO')" [class.active]="logFilterLevel() === 'INFO'" class="pill-btn pill-info">INFO</button>
+                <button (click)="logFilterLevel.set('AUDIT')" [class.active]="logFilterLevel() === 'AUDIT'" class="pill-btn pill-audit">AUDIT</button>
+              </div>
+
+              <input type="text" [(ngModel)]="logSearchQuery" placeholder="Filter logs..." class="terminal-search-input" />
             </div>
           </div>
-          <div class="terminal-body">
-            <div *ngFor="let line of logs()" style="margin-bottom:4px; font-family:var(--font-code);">
-              {{ line }}
+
+          <div class="terminal-body" style="height:380px; overflow-y:auto;">
+            <div *ngFor="let log of filteredLogs()" class="terminal-log-row">
+              <span class="log-time">{{ log.timestamp }}</span>
+              <span class="log-level-badge" [ngClass]="'level-' + log.level.toLowerCase()">{{ log.level }}</span>
+              <span class="log-service">[{{ log.service }}]</span>
+              <span class="log-msg">{{ log.message }}</span>
             </div>
-            <div *ngIf="logs().length === 0" style="color:var(--text-dim);">
-              Connecting to SSE EventSource stream...
+            <div *ngIf="filteredLogs().length === 0" style="color:var(--heroui-text-dim); text-align:center; padding:20px;">
+              No matching log events received.
             </div>
           </div>
         </div>
@@ -567,19 +727,19 @@
         <!-- Trivy Security Scan & FinOps Costs Grid -->
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
           <div class="glass-panel">
-            <h3 style="font-family:var(--font-heading); margin-bottom:14px; font-size:1.15rem;">Container Vulnerability Scans (Trivy)</h3>
+            <h3 style="font-family:var(--font-heading); margin-bottom:14px; font-size:1.15rem;">Container Vulnerability Scans (Trivy + SonarQube)</h3>
             <div style="display:flex; gap:10px; margin-bottom:16px;">
               <span style="background:rgba(239, 68, 68, 0.15); color:#ef4444; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:700;">
                 0 CRITICAL
               </span>
               <span style="background:rgba(245, 158, 11, 0.15); color:#f59e0b; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:700;">
-                {{ catalogService.securityScansSignal()?.highVulnerabilities || 1 }} HIGH
+                {{ catalogService.securityScansSignal()?.highVulnerabilities || 0 }} HIGH
               </span>
               <span style="background:rgba(99, 102, 241, 0.15); color:#818cf8; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:700;">
-                {{ catalogService.securityScansSignal()?.mediumVulnerabilities || 4 }} MEDIUM
+                {{ catalogService.securityScansSignal()?.mediumVulnerabilities || 3 }} MEDIUM
               </span>
             </div>
-            <div *ngFor="let img of catalogService.securityScansSignal()?.scannedImages" style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-color); font-size:0.85rem;">
+            <div *ngFor="let img of catalogService.securityScansSignal()?.scannedImages" style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--heroui-border); font-size:0.85rem;">
               <span><code>{{ img.image }}</code></span>
               <span [style.color]="img.status === 'PASSED' ? '#34d399' : '#f59e0b'" style="font-weight:700;">{{ img.status }}</span>
             </div>
@@ -590,7 +750,7 @@
             <div style="font-size:1.5rem; font-weight:800; color:#34d399; margin-bottom:12px;">
               {{ catalogService.finOpsSignal()?.currentMonthTotal || '1,842.50' }} &euro; / month
             </div>
-            <div *ngFor="let teamCost of catalogService.finOpsSignal()?.breakdownByTeam" style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-color); font-size:0.85rem;">
+            <div *ngFor="let teamCost of catalogService.finOpsSignal()?.breakdownByTeam" style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--heroui-border); font-size:0.85rem;">
               <span>{{ teamCost.team }}</span>
               <span style="font-weight:700;">{{ teamCost.monthlyCost }} &euro; ({{ teamCost.percentage }}%)</span>
             </div>
@@ -690,7 +850,7 @@
           <h3 style="font-family:var(--font-heading); margin-bottom:14px; font-size:1.15rem;">ABAC &amp; OPA Policy Engine Sandbox</h3>
           <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:14px; margin-bottom:18px;">
             <div>
-              <label style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:4px;">Role</label>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Role</label>
               <select [(ngModel)]="abacTest.role" class="select-input" style="width:100%;">
                 <option value="ADMIN">ADMIN</option>
                 <option value="TECH_LEAD">TECH_LEAD</option>
@@ -700,7 +860,7 @@
             </div>
 
             <div>
-              <label style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:4px;">Target Environment</label>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Target Environment</label>
               <select [(ngModel)]="abacTest.env" class="select-input" style="width:100%;">
                 <option value="PROD">PROD</option>
                 <option value="STAGING">STAGING</option>
@@ -709,7 +869,7 @@
             </div>
 
             <div>
-              <label style="font-size:0.78rem; color:var(--text-muted); display:block; margin-bottom:4px;">Operation</label>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Operation</label>
               <select [(ngModel)]="abacTest.action" class="select-input" style="width:100%;">
                 <option value="MUTATE_FEATURE_FLAGS">MUTATE_FEATURE_FLAGS</option>
                 <option value="DELETE_SERVICE">DELETE_SERVICE</option>
@@ -720,7 +880,7 @@
 
           <button (click)="evaluateAbac()" class="btn btn-primary btn-sm">Evaluate ABAC Policy</button>
 
-          <div *ngIf="abacEvalResult()" style="margin-top:14px; padding:12px; background:#0a0e17; border-radius:6px; font-family:var(--font-code); font-size:0.85rem;">
+          <div *ngIf="abacEvalResult()" style="margin-top:14px; padding:12px; background:var(--heroui-content2); border-radius:6px; font-family:var(--font-code); font-size:0.85rem;">
             Decision: <strong [style.color]="abacEvalResult()?.allowed ? '#34d399' : '#ef4444'">
               {{ abacEvalResult()?.allowed ? 'ALLOW (Access Granted)' : 'DENY (Access Blocked by Policy)' }}
             </strong>
@@ -741,11 +901,11 @@
           <div class="chat-history">
             <div *ngFor="let msg of chatHistory()" class="chat-bubble" [class.user]="msg.sender === 'USER'" [class.bot]="msg.sender === 'COPILOT'">
               <div class="bubble-avatar">
-                <svg *ngIf="msg.sender === 'USER'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#818cf8;">
+                <svg *ngIf="msg.sender === 'USER'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#818cf8;">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                <svg *ngIf="msg.sender === 'COPILOT'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#34d399;">
+                <svg *ngIf="msg.sender === 'COPILOT'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#34d399;">
                   <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                   <polyline points="2 17 12 22 22 17"></polyline>
                   <polyline points="2 12 12 17 22 12"></polyline>
@@ -753,10 +913,10 @@
               </div>
 
               <div class="bubble-content">
-                <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:4px;">
+                <div style="font-size:0.75rem; color:var(--heroui-text-dim); margin-bottom:4px;">
                   {{ msg.sender === 'USER' ? currentUser().username : 'IDP Copilot RAG' }} • {{ msg.time }}
                 </div>
-                <div style="line-height:1.5;">{{ msg.text }}</div>
+                <div style="line-height:1.5; white-space:pre-wrap;">{{ msg.text }}</div>
 
                 <div *ngIf="msg.sources && msg.sources.length > 0" style="margin-top:12px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.75rem; color:#a5b4fc;">
                   <strong>Verified Microservice Sources:</strong>
@@ -775,20 +935,20 @@
 
             <div *ngIf="isCopilotLoading()" class="chat-bubble bot">
               <div class="bubble-avatar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#34d399;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#34d399;">
                   <circle cx="12" cy="12" r="10"></circle>
                 </svg>
               </div>
-              <div class="bubble-content" style="color:var(--text-muted);">
+              <div class="bubble-content" style="color:var(--heroui-text-muted);">
                 Searching vector index and microservice catalog...
               </div>
             </div>
           </div>
 
           <div class="chat-input-row">
-            <input type="text" [(ngModel)]="chatInput" (keyup.enter)="sendCopilotQuery()" placeholder="Ask Copilot about any service, API endpoint, or architecture pattern..." class="text-input" style="flex:1;" />
+            <input type="text" [(ngModel)]="chatInput" (keyup.enter)="sendCopilotQuery()" placeholder="Ask Copilot or type action (e.g. 'restart payment service' or 'scale product catalog')..." class="text-input" style="flex:1;" />
             <button (click)="sendCopilotQuery()" [disabled]="!chatInput.trim()" class="btn btn-primary">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
               </svg>
@@ -797,35 +957,661 @@
           </div>
         </div>
       </section>
+
+      <!-- ================= TAB 9: KEYCLOAK IAM & AUTHENTICATION HUB ================= -->
+      <section *ngIf="activeTab() === 'keycloak'">
+        <div class="pane-header">
+          <div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+              <h1 class="pane-title" style="margin:0;">Keycloak 24 IAM &amp; Single Sign-On</h1>
+              <span class="brand-badge" style="background:var(--heroui-success-50); color:#34d399; border-color:var(--heroui-success-border);">
+                REALM: idp-realm (ACTIVE)
+              </span>
+            </div>
+            <p class="pane-subtitle">Centralized OAuth2 / OpenID Connect authorization server with RS256 token verification and RBAC matrix</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <a href="http://localhost:8180/realms/idp-realm/account" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              Keycloak User Account
+            </a>
+            <a href="http://localhost:8180" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Keycloak Admin Console
+            </a>
+          </div>
+        </div>
+
+        <!-- Keycloak Connection Status Summary Cards -->
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="background:rgba(99, 102, 241, 0.15); color:#818cf8;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="stat-val" style="font-size:1.15rem;">idp-realm</div>
+              <div class="stat-lbl">Active Realm (RS256)</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="background:rgba(52, 211, 153, 0.15); color:#34d399;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div class="stat-val" style="font-size:1.15rem; color:#34d399;">CONNECTED</div>
+              <div class="stat-lbl">http://localhost:8180</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div>
+              <div class="stat-val" style="font-size:1.15rem;">idp-frontend</div>
+              <div class="stat-lbl">PKCE Public Client</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon-wrapper" style="background:rgba(245, 158, 11, 0.15); color:#fbbf24;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div>
+              <div class="stat-val" style="font-size:1.15rem; color:#818cf8;">{{ currentUser().username }}</div>
+              <div class="stat-lbl">Active Role: <strong style="color:#34d399;">{{ currentUser().role }}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Authentication & Personas Grid -->
+        <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:24px; margin-bottom:28px;">
+          <!-- Left: HeroUI Keycloak Direct Sign-In Card -->
+          <div class="glass-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0;">Direct Keycloak OAuth2 Sign-In</h3>
+              <span style="font-size:0.72rem; color:var(--heroui-text-dim); background:var(--heroui-content2); padding:2px 8px; border-radius:4px;">
+                Direct Access Grant
+              </span>
+            </div>
+
+            <div *ngIf="keycloakService.loginErrorSignal()" style="background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.4); color:#f87171; border-radius:8px; padding:10px 14px; font-size:0.8rem; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>{{ keycloakService.loginErrorSignal() }}</span>
+            </div>
+
+            <form (ngSubmit)="performKeycloakLogin()">
+              <div style="margin-bottom:14px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
+                  Username or Corporate Email
+                </label>
+                <div class="kc-input-container">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--heroui-text-dim);">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <input type="text" [(ngModel)]="loginForm.username" name="username" placeholder="e.g. admin or tech_lead" required />
+                </div>
+              </div>
+
+              <div style="margin-bottom:14px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
+                  Password
+                </label>
+                <div class="kc-input-container">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--heroui-text-dim);">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                  <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="loginForm.password" name="password" placeholder="Enter password" required />
+                  <button type="button" (click)="toggleShowPassword()" class="kc-pwd-toggle" title="Toggle password visibility">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="!showPassword()">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="showPassword()">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div style="margin-bottom:16px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
+                  Target RBAC Role
+                </label>
+                <select [(ngModel)]="loginForm.role" name="role" class="select-input" style="width:100%;">
+                  <option value="ADMIN">ADMIN (Full Platform Superuser)</option>
+                  <option value="TECH_LEAD">TECH_LEAD (Scaffolding &amp; Canary Rollouts)</option>
+                  <option value="DEVELOPER">DEVELOPER (Microservice Builder &amp; Logs)</option>
+                  <option value="VIEWER">VIEWER (Read-Only Compliance Observer)</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width:100%;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                  <polyline points="10 17 15 12 10 7"></polyline>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+                Authenticate with Keycloak
+              </button>
+            </form>
+          </div>
+
+          <!-- Right: One-Click Role Personas Switcher -->
+          <div class="glass-panel">
+            <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin-bottom:6px;">Pre-Configured Keycloak Personas</h3>
+            <p style="font-size:0.8rem; color:var(--heroui-text-muted); margin-bottom:16px;">
+              Click any card to issue a live token for that persona and instantly update permissions:
+            </p>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <div *ngFor="let persona of keycloakPersonas" (click)="selectPersona(persona)" class="kc-persona-card" [style.borderColor]="currentUser().role === persona.role ? '#6366f1' : ''">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-weight:700; color:#fff; font-size:0.88rem;">{{ persona.name }}</span>
+                    <span class="tech-badge" [ngClass]="persona.badgeClass">{{ persona.role }}</span>
+                  </div>
+                  <div style="font-size:0.72rem; color:#818cf8; font-family:var(--font-code); margin-bottom:4px;">
+                    {{ persona.username }} / {{ persona.username === 'admin' ? 'adminpassword' : persona.username + 'password' }}
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--heroui-text-muted); line-height:1.4;">
+                    {{ persona.description }}
+                  </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px;">
+                  <span *ngIf="currentUser().role === persona.role" style="font-size:0.7rem; color:#34d399; font-weight:700; display:flex; align-items:center; gap:4px;">
+                    <span class="pulse-dot pulse-green"></span> ACTIVE
+                  </span>
+                  <span *ngIf="currentUser().role !== persona.role" style="font-size:0.7rem; color:var(--heroui-text-dim);">
+                    Click to switch
+                  </span>
+                  <span style="font-size:0.72rem; color:#38bdf8; font-weight:700;">Switch &rarr;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Decoded JWT Token Claims Viewer -->
+        <div class="glass-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div>
+              <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0;">Active RS256 Bearer Token Decoded Claims</h3>
+              <p style="font-size:0.78rem; color:var(--heroui-text-muted); margin:4px 0 0 0;">
+                Live OpenID Connect payload passed to Spring Boot backend for ABAC and role verification
+              </p>
+            </div>
+            <span style="color:#34d399; font-size:0.75rem; font-weight:700; background:var(--heroui-success-50); padding:3px 10px; border-radius:4px; border:1px solid var(--heroui-success-border);">
+              VERIFIED &bull; RS256
+            </span>
+          </div>
+
+          <div class="kc-jwt-viewer" style="max-height:260px;">
+            <pre style="font-family:inherit; margin:0;">{{ jwtClaims() | json }}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 10: LIVE TOPOLOGY & SERVICE MESH CANVAS ================= -->
+      <section *ngIf="activeTab() === 'topology'">
+        <div class="pane-header">
+          <div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+              <h1 class="pane-title" style="margin:0;">Live Service Mesh &amp; Topology Graph</h1>
+              <span class="brand-badge" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8; border-color:rgba(56, 189, 248, 0.3);">
+                12 MICROSERVICES &bull; LIVE MESH
+              </span>
+            </div>
+            <p class="pane-subtitle">
+              Interactive distributed dependency graph with real-time AMQP event streams, REST ingress, SQL queries, and L2 cache flows
+            </p>
+          </div>
+
+          <!-- Tier Filter Segmented Control -->
+          <div class="kc-tab-nav" style="margin:0;">
+            <button (click)="setTopologyFilter('ALL')" [class.active]="topologyFilter() === 'ALL'" class="kc-tab-btn">All Tiers</button>
+            <button (click)="setTopologyFilter('EDGE')" [class.active]="topologyFilter() === 'EDGE'" class="kc-tab-btn">Edge / Ingress</button>
+            <button (click)="setTopologyFilter('SERVICES')" [class.active]="topologyFilter() === 'SERVICES'" class="kc-tab-btn">Microservices</button>
+            <button (click)="setTopologyFilter('EVENTS')" [class.active]="topologyFilter() === 'EVENTS'" class="kc-tab-btn">AMQP &amp; AI</button>
+            <button (click)="setTopologyFilter('DATA')" [class.active]="topologyFilter() === 'DATA'" class="kc-tab-btn">Data &amp; Cache</button>
+            <button (click)="setTopologyFilter('INFRA')" [class.active]="topologyFilter() === 'INFRA'" class="kc-tab-btn">K8s &amp; GitOps</button>
+          </div>
+        </div>
+
+        <!-- Live Topology Canvas -->
+        <div class="topology-canvas">
+          <div class="topology-grid-bg"></div>
+
+          <!-- Topology HUD Stats Bar -->
+          <div class="topology-hud">
+            <div class="topology-hud-stats">
+              <div class="topology-hud-item">
+                <span class="pulse-dot pulse-green"></span>
+                <span style="color:var(--heroui-text-dim);">Throughput:</span>
+                <strong style="color:#38bdf8;">{{ catalogService.telemetrySignal()?.rps || 142 }} req/s</strong>
+              </div>
+              <div class="topology-hud-item">
+                <span style="color:var(--heroui-text-dim);">P95 Latency:</span>
+                <strong [style.color]="catalogService.telemetrySignal()?.p95LatencyMs > 100 ? '#ef4444' : '#34d399'">
+                  {{ catalogService.telemetrySignal()?.p95LatencyMs || 12 }} ms
+                </strong>
+              </div>
+              <div class="topology-hud-item">
+                <span style="color:var(--heroui-text-dim);">Replicas:</span>
+                <strong style="color:#a78bfa;">18 Pods</strong>
+              </div>
+              <div class="topology-hud-item">
+                <span style="color:var(--heroui-text-dim);">Mesh Health:</span>
+                <strong style="color:#34d399;">99.98%</strong>
+              </div>
+            </div>
+
+            <div style="font-size:0.75rem; color:var(--heroui-text-muted); display:flex; align-items:center; gap:6px;">
+              <span class="pulse-dot" [ngClass]="{
+                'pulse-green': catalogService.trafficModeSignal() === 'NORMAL',
+                'pulse-yellow': catalogService.trafficModeSignal() === 'SPIKE',
+                'pulse-red': catalogService.trafficModeSignal() === 'CHAOS_ERROR' || catalogService.trafficModeSignal() === 'CHAOS_LATENCY'
+              }"></span>
+              Traffic: <strong>{{ catalogService.trafficModeSignal() }}</strong>
+            </div>
+          </div>
+
+          <!-- Tier Lanes Grid -->
+          <div class="topology-tier-container">
+            <!-- TIER 1: EDGE & INGRESS -->
+            <div class="topology-tier-row" *ngIf="topologyFilter() === 'ALL' || topologyFilter() === 'EDGE'">
+              <div class="topology-tier-header">
+                <span style="color:#818cf8;">&bull; Tier 1: Ingress &amp; Identity Gateways</span>
+                <span class="topology-tier-line"></span>
+              </div>
+              <div class="topology-nodes-grid">
+                <div *ngFor="let node of topologyMeshNodes | slice:0:2" 
+                     (click)="selectTopologyNode(node)" 
+                     class="topology-node-card tier-edge" 
+                     [class.selected]="selectedTopologyNode()?.id === node.id">
+                  <div class="topology-node-head">
+                    <div>
+                      <div class="topology-node-title">{{ node.name }}</div>
+                      <div class="topology-node-sub">{{ node.type }}</div>
+                    </div>
+                    <span class="tech-badge" [ngClass]="node.badgeClass">{{ node.tech }}</span>
+                  </div>
+                  <div class="topology-node-telemetry">
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Port</span>
+                      <span class="topology-tel-val" style="color:#818cf8;">{{ node.port }}</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Throughput</span>
+                      <span class="topology-tel-val" style="color:#38bdf8;">{{ node.rps }} r/s</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Pods</span>
+                      <span class="topology-tel-val" style="color:#34d399;">{{ node.replicas }}</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--heroui-text-dim); display:flex; justify-content:space-between; align-items:center;">
+                    <span>{{ node.protocols[0] }}</span>
+                    <span style="color:#818cf8; font-weight:600;">Inspect &rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animated Connector Stream 1 -->
+            <div class="topology-flow-connector" *ngIf="topologyFilter() === 'ALL'">
+              <div class="topology-flow-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+                <span>HTTP/2 Ingress &amp; OIDC JWT Token Verification</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <!-- TIER 2: CORE MICROSERVICES -->
+            <div class="topology-tier-row" *ngIf="topologyFilter() === 'ALL' || topologyFilter() === 'SERVICES'">
+              <div class="topology-tier-header">
+                <span style="color:#34d399;">&bull; Tier 2: Core Microservices Mesh</span>
+                <span class="topology-tier-line"></span>
+              </div>
+              <div class="topology-nodes-grid">
+                <div *ngFor="let node of topologyMeshNodes | slice:2:5" 
+                     (click)="selectTopologyNode(node)" 
+                     class="topology-node-card tier-services" 
+                     [class.selected]="selectedTopologyNode()?.id === node.id">
+                  <div class="topology-node-head">
+                    <div>
+                      <div class="topology-node-title">{{ node.name }}</div>
+                      <div class="topology-node-sub">{{ node.type }}</div>
+                    </div>
+                    <span class="tech-badge" [ngClass]="node.badgeClass">{{ node.tech }}</span>
+                  </div>
+                  <div class="topology-node-telemetry">
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Port</span>
+                      <span class="topology-tel-val" style="color:#34d399;">{{ node.port }}</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Throughput</span>
+                      <span class="topology-tel-val" style="color:#38bdf8;">{{ node.rps }} r/s</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Pods</span>
+                      <span class="topology-tel-val" style="color:#34d399;">{{ node.replicas }}</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--heroui-text-dim); display:flex; justify-content:space-between; align-items:center;">
+                    <span>{{ node.protocols[0] }}</span>
+                    <span style="color:#34d399; font-weight:600;">Inspect &rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animated Connector Stream 2 -->
+            <div class="topology-flow-connector" *ngIf="topologyFilter() === 'ALL'">
+              <div class="topology-flow-pill" style="border-color:rgba(245,158,11,0.4); background:rgba(245,158,11,0.12); color:#fbbf24;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+                <span>AMQP 0-9-1 Asynchronous Event Stream &bull; queue: fraud.analysis.queue</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <!-- TIER 3: EVENT STREAMS & AI -->
+            <div class="topology-tier-row" *ngIf="topologyFilter() === 'ALL' || topologyFilter() === 'EVENTS'">
+              <div class="topology-tier-header">
+                <span style="color:#f59e0b;">&bull; Tier 3: Asynchronous Event Streams &amp; AI Intelligence</span>
+                <span class="topology-tier-line"></span>
+              </div>
+              <div class="topology-nodes-grid">
+                <div *ngFor="let node of topologyMeshNodes | slice:5:7" 
+                     (click)="selectTopologyNode(node)" 
+                     class="topology-node-card tier-events" 
+                     [class.selected]="selectedTopologyNode()?.id === node.id">
+                  <div class="topology-node-head">
+                    <div>
+                      <div class="topology-node-title">{{ node.name }}</div>
+                      <div class="topology-node-sub">{{ node.type }}</div>
+                    </div>
+                    <span class="tech-badge" [ngClass]="node.badgeClass">{{ node.tech }}</span>
+                  </div>
+                  <div class="topology-node-telemetry">
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Port</span>
+                      <span class="topology-tel-val" style="color:#f59e0b;">{{ node.port }}</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Throughput</span>
+                      <span class="topology-tel-val" style="color:#38bdf8;">{{ node.rps }} r/s</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Pods</span>
+                      <span class="topology-tel-val" style="color:#34d399;">{{ node.replicas }}</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--heroui-text-dim); display:flex; justify-content:space-between; align-items:center;">
+                    <span>{{ node.protocols[0] }}</span>
+                    <span style="color:#f59e0b; font-weight:600;">Inspect &rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animated Connector Stream 3 -->
+            <div class="topology-flow-connector" *ngIf="topologyFilter() === 'ALL'">
+              <div class="topology-flow-pill" style="border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38bdf8;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+                <span>JDBC Connection Pooling &amp; In-Memory RESP Distributed Caching</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <!-- TIER 4: DATA & CACHE -->
+            <div class="topology-tier-row" *ngIf="topologyFilter() === 'ALL' || topologyFilter() === 'DATA'">
+              <div class="topology-tier-header">
+                <span style="color:#38bdf8;">&bull; Tier 4: Distributed Relational &amp; Vector Storage Tier</span>
+                <span class="topology-tier-line"></span>
+              </div>
+              <div class="topology-nodes-grid">
+                <div *ngFor="let node of topologyMeshNodes | slice:7:9" 
+                     (click)="selectTopologyNode(node)" 
+                     class="topology-node-card tier-data" 
+                     [class.selected]="selectedTopologyNode()?.id === node.id">
+                  <div class="topology-node-head">
+                    <div>
+                      <div class="topology-node-title">{{ node.name }}</div>
+                      <div class="topology-node-sub">{{ node.type }}</div>
+                    </div>
+                    <span class="tech-badge" [ngClass]="node.badgeClass">{{ node.tech }}</span>
+                  </div>
+                  <div class="topology-node-telemetry">
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Port</span>
+                      <span class="topology-tel-val" style="color:#38bdf8;">{{ node.port }}</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Throughput</span>
+                      <span class="topology-tel-val" style="color:#38bdf8;">{{ node.rps }} r/s</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Pods</span>
+                      <span class="topology-tel-val" style="color:#34d399;">{{ node.replicas }}</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--heroui-text-dim); display:flex; justify-content:space-between; align-items:center;">
+                    <span>{{ node.protocols[0] }}</span>
+                    <span style="color:#38bdf8; font-weight:600;">Inspect &rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TIER 5: INFRASTRUCTURE & GITOPS -->
+            <div class="topology-tier-row" *ngIf="topologyFilter() === 'ALL' || topologyFilter() === 'INFRA'">
+              <div class="topology-tier-header">
+                <span style="color:#a855f7;">&bull; Tier 5: Kubernetes Orchestration &amp; Declarative GitOps</span>
+                <span class="topology-tier-line"></span>
+              </div>
+              <div class="topology-nodes-grid">
+                <div *ngFor="let node of topologyMeshNodes | slice:9:12" 
+                     (click)="selectTopologyNode(node)" 
+                     class="topology-node-card tier-infra" 
+                     [class.selected]="selectedTopologyNode()?.id === node.id">
+                  <div class="topology-node-head">
+                    <div>
+                      <div class="topology-node-title">{{ node.name }}</div>
+                      <div class="topology-node-sub">{{ node.type }}</div>
+                    </div>
+                    <span class="tech-badge" [ngClass]="node.badgeClass">{{ node.tech }}</span>
+                  </div>
+                  <div class="topology-node-telemetry">
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Port</span>
+                      <span class="topology-tel-val" style="color:#a855f7;">{{ node.port }}</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Throughput</span>
+                      <span class="topology-tel-val" style="color:#38bdf8;">{{ node.rps }} r/s</span>
+                    </div>
+                    <div class="topology-tel-item">
+                      <span class="topology-tel-lbl">Pods</span>
+                      <span class="topology-tel-val" style="color:#34d399;">{{ node.replicas }}</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.72rem; color:var(--heroui-text-dim); display:flex; justify-content:space-between; align-items:center;">
+                    <span>{{ node.protocols[0] }}</span>
+                    <span style="color:#a855f7; font-weight:600;">Inspect &rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Node Inspector Drawer -->
+          <div *ngIf="selectedTopologyNode()" class="topology-drawer">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <h3 style="font-family:var(--font-heading); font-size:1.25rem; color:#fff; margin:0;">
+                    {{ selectedTopologyNode()?.name }}
+                  </h3>
+                  <span class="tech-badge" [ngClass]="selectedTopologyNode()?.badgeClass">
+                    {{ selectedTopologyNode()?.tech }}
+                  </span>
+                  <span class="service-status-pill status-active">
+                    {{ selectedTopologyNode()?.status }}
+                  </span>
+                </div>
+                <div style="font-size:0.8rem; color:var(--heroui-text-dim); margin-top:4px;">
+                  {{ selectedTopologyNode()?.type }} &bull; Port {{ selectedTopologyNode()?.port }}
+                </div>
+              </div>
+              <button (click)="closeTopologyNode()" class="btn btn-outline btn-sm">✕</button>
+            </div>
+
+            <p style="font-size:0.86rem; color:var(--heroui-text-muted); line-height:1.5; margin-bottom:18px;">
+              {{ selectedTopologyNode()?.description }}
+            </p>
+
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; background:rgba(0,0,0,0.3); padding:12px 16px; border-radius:8px; margin-bottom:18px;">
+              <div>
+                <div style="font-size:0.7rem; color:var(--heroui-text-dim); text-transform:uppercase;">Active Replicas</div>
+                <div style="font-size:1.05rem; font-weight:700; color:#34d399; font-family:var(--font-code);">{{ selectedTopologyNode()?.replicas }} Pods</div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem; color:var(--heroui-text-dim); text-transform:uppercase;">Throughput</div>
+                <div style="font-size:1.05rem; font-weight:700; color:#38bdf8; font-family:var(--font-code);">{{ selectedTopologyNode()?.rps }} req/s</div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem; color:var(--heroui-text-dim); text-transform:uppercase;">P95 Latency</div>
+                <div style="font-size:1.05rem; font-weight:700; color:#fbbf24; font-family:var(--font-code);">{{ selectedTopologyNode()?.latency }} ms</div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem; color:var(--heroui-text-dim); text-transform:uppercase;">Protocols</div>
+                <div style="font-size:0.82rem; font-weight:600; color:#a5b4fc;">{{ selectedTopologyNode()?.protocols?.join(', ') }}</div>
+              </div>
+            </div>
+
+            <div *ngIf="selectedTopologyNode()?.dependencies && selectedTopologyNode()?.dependencies?.length > 0">
+              <h4 style="font-size:0.85rem; color:#a5b4fc; margin-bottom:8px;">Connected Mesh Dependencies:</h4>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <span *ngFor="let dep of selectedTopologyNode()?.dependencies" class="brand-badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; border-color:rgba(99,102,241,0.3);">
+                  &rarr; {{ dep }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
-  <!-- Service Detail Modal Drawer -->
+  <!-- Service Detail Modal Drawer with Full Live Actions -->
   <div *ngIf="isDetailModalOpen()" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width:680px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
         <div>
           <h2 style="font-family:var(--font-heading); font-size:1.4rem;">{{ selectedService()?.name }}</h2>
-          <span class="tech-badge badge-spring" style="margin-top:6px; display:inline-block;">{{ selectedService()?.techStack }}</span>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+            <span class="tech-badge badge-spring">{{ selectedService()?.techStack }}</span>
+            <span class="service-status-pill status-active">{{ selectedService()?.status }}</span>
+            <span style="font-size:0.75rem; color:var(--heroui-text-dim);">Replicas: <strong>{{ selectedService()?.replicas || 2 }} pods</strong></span>
+          </div>
         </div>
         <button (click)="closeServiceDetail()" class="btn btn-outline btn-sm">✕</button>
       </div>
 
-      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">
+      <p style="color:var(--heroui-text-muted); font-size:0.9rem; margin-bottom:20px; line-height:1.5;">
         {{ selectedService()?.description }}
       </p>
 
-      <div style="font-size:0.85rem; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--border-color); padding-top:16px; margin-bottom:20px;">
+      <!-- Live Service Control Bar inside Modal -->
+      <div style="display:flex; gap:10px; background:#070a12; padding:14px; border-radius:8px; border:1px solid var(--heroui-border); margin-bottom:20px;">
+        <button (click)="restartService(selectedService()!)" class="btn btn-outline btn-sm" style="flex:1;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Rolling Restart
+        </button>
+        <button (click)="scaleService(selectedService()!, 1)" class="btn btn-outline btn-sm" style="flex:1;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+          Scale +1 Pod
+        </button>
+        <button *ngIf="selectedService()?.status !== 'DEGRADED'" (click)="degradeService(selectedService()!)" class="btn btn-outline btn-sm" style="flex:1; border-color:#ef4444; color:#ef4444;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          Chaos Fault
+        </button>
+        <button *ngIf="selectedService()?.status === 'DEGRADED'" (click)="healService(selectedService()!)" class="btn btn-primary btn-sm" style="flex:1;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Heal Service
+        </button>
+      </div>
+
+      <div style="font-size:0.85rem; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--heroui-border); padding-top:16px; margin-bottom:20px;">
         <div><strong>Git Repository:</strong> <a [href]="selectedService()?.repositoryUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.repositoryUrl }}</a></div>
         <div><strong>Codeowner Team:</strong> {{ selectedService()?.ownerTeam }}</div>
-        <div><strong>Service Status:</strong> <span style="color:#34d399; font-weight:700;">{{ selectedService()?.status }}</span></div>
+        <div><strong>Service Version:</strong> <code style="color:#34d399;">{{ selectedService()?.version || 'v1.0.0' }}</code></div>
       </div>
 
       <h4 style="margin-bottom:10px; color:#a5b4fc; font-size:0.95rem;">Exposed REST Endpoints</h4>
       <div *ngFor="let ep of selectedService()?.exposedApis" style="background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:6px; margin-bottom:8px; font-family:var(--font-code); font-size:0.82rem;">
         <span style="color:#34d399; font-weight:700;">{{ ep.method }}</span> {{ ep.path }} — <span style="color:#94a3b8;">{{ ep.description }}</span>
       </div>
-      <div *ngIf="!selectedService()?.exposedApis || selectedService()?.exposedApis?.length === 0" style="color:var(--text-dim); font-size:0.85rem;">
+      <div *ngIf="!selectedService()?.exposedApis || selectedService()?.exposedApis?.length === 0" style="color:var(--heroui-text-dim); font-size:0.85rem;">
         No public endpoints declared for this service.
       </div>
     </div>
@@ -833,78 +1619,418 @@
 
   <!-- Topology Graph Modal -->
   <div *ngIf="isGraphModalOpen()" class="modal-overlay">
-    <div class="modal-content" style="max-width:800px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="font-family:var(--font-heading); font-size:1.3rem;">Interactive Topology &amp; Service Mesh Graph</h2>
+    <div class="modal-content" style="max-width:960px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h2 style="font-family:var(--font-heading); font-size:1.35rem; margin:0;">Live Distributed Service Mesh</h2>
+          <span class="brand-badge" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8; border-color:rgba(56, 189, 248, 0.3);">
+            FULL TOPOLOGY VIEW
+          </span>
+        </div>
         <button (click)="closeGraphModal()" class="btn btn-outline btn-sm">✕</button>
       </div>
 
-      <div style="background:#070a12; border:1px solid var(--border-color); border-radius:8px; padding:24px; min-height:300px; display:flex; flex-direction:column; gap:16px;">
-        <div style="display:flex; justify-content:space-around; align-items:center;">
-          <div style="background:rgba(99, 102, 241, 0.2); border:1px solid #6366f1; padding:12px 18px; border-radius:8px; text-align:center;">
-            <div style="font-weight:700; color:#fff;">Frontend Portal</div>
-            <div style="font-size:0.75rem; color:#818cf8;">Angular SPA</div>
+      <div class="topology-canvas" style="max-height:540px; overflow-y:auto;">
+        <div class="topology-grid-bg"></div>
+
+        <!-- HUD inside Modal -->
+        <div class="topology-hud">
+          <div class="topology-hud-stats">
+            <div class="topology-hud-item">
+              <span class="pulse-dot pulse-green"></span>
+              <span>Throughput:</span>
+              <strong style="color:#38bdf8;">{{ catalogService.telemetrySignal()?.rps || 142 }} req/s</strong>
+            </div>
+            <div class="topology-hud-item">
+              <span>P95 Latency:</span>
+              <strong style="color:#34d399;">{{ catalogService.telemetrySignal()?.p95LatencyMs || 12 }} ms</strong>
+            </div>
+            <div class="topology-hud-item">
+              <span>Replicas:</span>
+              <strong style="color:#a78bfa;">18 Pods</strong>
+            </div>
           </div>
-          <div style="color:#818cf8; font-weight:800;">&rarr; REST &rarr;</div>
-          <div style="background:rgba(52, 211, 153, 0.2); border:1px solid #34d399; padding:12px 18px; border-radius:8px; text-align:center;">
-            <div style="font-weight:700; color:#fff;">Payment Gateway</div>
-            <div style="font-size:0.75rem; color:#34d399;">Spring Boot API</div>
-          </div>
-          <div style="color:#34d399; font-weight:800;">&rarr; gRPC &rarr;</div>
-          <div style="background:rgba(251, 191, 36, 0.2); border:1px solid #fbbf24; padding:12px 18px; border-radius:8px; text-align:center;">
-            <div style="font-weight:700; color:#fff;">Notification Engine</div>
-            <div style="font-size:0.75rem; color:#fbbf24;">Python FastAPI</div>
-          </div>
+          <button (click)="closeGraphModal(); setTab('topology')" class="btn btn-primary btn-sm">
+            Open Fullscreen Mesh &rarr;
+          </button>
         </div>
 
-        <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:16px; font-size:0.82rem; color:var(--text-muted); text-align:center;">
-          Topology automatically discovered via Spring Cloud &amp; Kubernetes DNS Service Registry
+        <div class="topology-nodes-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+          <div *ngFor="let node of topologyMeshNodes" 
+               (click)="selectTopologyNode(node)" 
+               class="topology-node-card" 
+               [ngClass]="'tier-' + node.tier.toLowerCase()"
+               [class.selected]="selectedTopologyNode()?.id === node.id">
+            <div class="topology-node-head">
+              <div>
+                <div class="topology-node-title">{{ node.name }}</div>
+                <div class="topology-node-sub">{{ node.type }}</div>
+              </div>
+              <span class="tech-badge" [ngClass]="node.badgeClass">{{ node.tech }}</span>
+            </div>
+            <div class="topology-node-telemetry">
+              <div class="topology-tel-item">
+                <span class="topology-tel-lbl">Port</span>
+                <span class="topology-tel-val">{{ node.port.split(' ')[0] }}</span>
+              </div>
+              <div class="topology-tel-item">
+                <span class="topology-tel-lbl">Throughput</span>
+                <span class="topology-tel-val" style="color:#38bdf8;">{{ node.rps }} r/s</span>
+              </div>
+              <div class="topology-tel-item">
+                <span class="topology-tel-lbl">Pods</span>
+                <span class="topology-tel-val" style="color:#34d399;">{{ node.replicas }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Keycloak SSO Modal -->
-  <div *ngIf="isKeycloakLoginOpen()" class="modal-overlay">
-    <div class="modal-content" style="max-width:440px;">
+  <!-- Create Feature Flag Modal -->
+  <div *ngIf="isNewFlagModalOpen()" class="modal-overlay">
+    <div class="modal-content" style="max-width:480px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="font-family:var(--font-heading); font-size:1.25rem;">Create New Feature Flag</h2>
+        <button (click)="closeNewFlagModal()" class="btn btn-outline btn-sm">✕</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px;">
         <div>
-          <h2 style="font-family:var(--font-heading); font-size:1.25rem;">Keycloak SSO Sign In</h2>
-          <p style="font-size:0.78rem; color:var(--text-dim);">Authenticate with realm <code>idp-realm</code></p>
+          <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Flag Key</label>
+          <input type="text" [(ngModel)]="newFlagForm.key" placeholder="e.g. STRIPE_CHECKOUT_V3" class="text-input" style="width:100%;" />
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Description</label>
+          <input type="text" [(ngModel)]="newFlagForm.description" placeholder="Feature rollout purpose..." class="text-input" style="width:100%;" />
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Target Engineering Team</label>
+          <input type="text" [(ngModel)]="newFlagForm.targetTeam" class="text-input" style="width:100%;" />
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">
+            Initial Rollout Percentage ({{ newFlagForm.rolloutPercent }}%)
+          </label>
+          <input type="range" min="0" max="100" [(ngModel)]="newFlagForm.rolloutPercent" style="width:100%; accent-color:#6366f1;" />
+        </div>
+
+        <button (click)="submitNewFlag()" class="btn btn-primary" style="margin-top:10px;">
+          Create &amp; Activate Feature Flag
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Keycloak SSO Login Modal (HeroUI Glassmorphism) -->
+  <div *ngIf="isKeycloakLoginOpen()" class="modal-overlay">
+    <div class="modal-content kc-login-modal">
+      <div class="kc-login-header">
+        <div class="kc-brand-group">
+          <div class="kc-shield-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="kc-login-title">Keycloak Identity &amp; Access</div>
+            <div class="kc-realm-badge">
+              <span class="pulse-dot pulse-green"></span>
+              Realm: <strong>idp-realm</strong> &bull; Client: <strong>idp-frontend</strong>
+            </div>
+          </div>
         </div>
         <button (click)="closeKeycloakLogin()" class="btn btn-outline btn-sm">✕</button>
       </div>
 
-      <form (ngSubmit)="performKeycloakLogin()">
-        <div style="margin-bottom:14px;">
-          <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Username</label>
-          <input type="text" [(ngModel)]="loginForm.username" name="username" class="text-input" style="width:100%;" required />
+      <!-- Segmented Tab Navigation -->
+      <div class="kc-tab-nav">
+        <button (click)="loginTab.set('CREDENTIALS')" [class.active]="loginTab() === 'CREDENTIALS'" class="kc-tab-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          Credentials Sign-In
+        </button>
+
+        <button (click)="loginTab.set('PERSONAS')" [class.active]="loginTab() === 'PERSONAS'" class="kc-tab-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Role Personas
+        </button>
+
+        <button (click)="loginTab.set('JWT_INSPECTOR')" [class.active]="loginTab() === 'JWT_INSPECTOR'" class="kc-tab-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          JWT Token Inspector
+        </button>
+      </div>
+
+      <!-- TAB 1: CREDENTIALS SIGN-IN -->
+      <div *ngIf="loginTab() === 'CREDENTIALS'">
+        <div *ngIf="keycloakService.loginErrorSignal()" style="background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.4); color:#f87171; border-radius:8px; padding:10px 14px; font-size:0.8rem; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>{{ keycloakService.loginErrorSignal() }}</span>
         </div>
 
-        <div style="margin-bottom:14px;">
-          <label style="font-size:0.8rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">Assigned Role</label>
-          <select [(ngModel)]="loginForm.role" name="role" class="select-input" style="width:100%;">
-            <option value="ADMIN">ADMIN (Full Platform Control)</option>
-            <option value="TECH_LEAD">TECH_LEAD (Scaffolding &amp; Flags)</option>
-            <option value="DEVELOPER">DEVELOPER (Scaffolding &amp; Logs)</option>
-            <option value="VIEWER">VIEWER (Read-Only Access)</option>
-          </select>
+        <form (ngSubmit)="performKeycloakLogin()">
+          <div style="margin-bottom:16px;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
+              Username or Corporate Email
+            </label>
+            <div class="kc-input-container">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--heroui-text-dim);">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <input type="text" [(ngModel)]="loginForm.username" name="username" placeholder="e.g. admin or lead@company.internal" required />
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
+              Password
+            </label>
+            <div class="kc-input-container">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--heroui-text-dim);">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="loginForm.password" name="password" placeholder="Enter password" required />
+              <button type="button" (click)="toggleShowPassword()" class="kc-pwd-toggle" title="Toggle password visibility">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="!showPassword()">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="showPassword()">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--heroui-text-muted); display:block; margin-bottom:6px;">
+              Assigned Keycloak Role
+            </label>
+            <select [(ngModel)]="loginForm.role" name="role" class="select-input" style="width:100%;">
+              <option value="ADMIN">ADMIN (Full Platform Superuser)</option>
+              <option value="TECH_LEAD">TECH_LEAD (Scaffolding &amp; Canary Flags)</option>
+              <option value="DEVELOPER">DEVELOPER (Service Builder &amp; Logs)</option>
+              <option value="VIEWER">VIEWER (Read-Only Auditor)</option>
+            </select>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; font-size:0.82rem;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--heroui-text-muted);">
+              <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" style="accent-color:#6366f1;" />
+              Remember active SSO session
+            </label>
+            <a href="http://localhost:8180/realms/idp-realm/account" target="_blank" style="color:#818cf8; text-decoration:none; font-weight:600;">
+              Keycloak Account &rarr;
+            </a>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            Sign In with Keycloak OAuth2 PKCE
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 2: ONE-CLICK ROLE PERSONAS -->
+      <div *ngIf="loginTab() === 'PERSONAS'">
+        <div style="font-size:0.82rem; color:var(--heroui-text-dim); margin-bottom:14px;">
+          Select any pre-configured Keycloak identity to authenticate instantly with its corresponding RBAC matrix:
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px;">
-          Authenticate with Keycloak OAuth2
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div *ngFor="let persona of keycloakPersonas" (click)="selectPersona(persona)" class="kc-persona-card">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-weight:700; color:#fff; font-size:0.92rem;">{{ persona.name }}</span>
+                <span class="tech-badge" [ngClass]="persona.badgeClass">{{ persona.role }}</span>
+              </div>
+              <div style="font-size:0.75rem; color:#818cf8; font-family:var(--font-code); margin-bottom:6px;">
+                {{ persona.username }} &bull; {{ persona.email }}
+              </div>
+              <div style="font-size:0.75rem; color:var(--heroui-text-muted); line-height:1.4;">
+                {{ persona.description }}
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+              <span style="font-size:0.75rem; color:#34d399; font-weight:700;">Select Identity &rarr;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: OIDC JWT TOKEN INSPECTOR -->
+      <div *ngIf="loginTab() === 'JWT_INSPECTOR'">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-size:0.82rem; color:var(--heroui-text-dim);">
+            Active RS256 Bearer Token Decoded Payload:
+          </div>
+          <span style="color:#34d399; font-size:0.72rem; font-weight:700; background:var(--heroui-success-50); padding:2px 8px; border-radius:4px; border:1px solid var(--heroui-success-border);">
+            VALID &bull; RS256
+          </span>
+        </div>
+
+        <div class="kc-jwt-viewer">
+          <pre style="font-family:inherit; margin:0;">{{ jwtClaims() | json }}</pre>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:0.78rem; color:var(--heroui-text-dim);">
+          <span>Algorithm: <strong>RS256 (RSA SHA-256)</strong></span>
+          <span>Issuer: <code>http://localhost:8180/realms/idp-realm</code></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= UN-AUTHENTICATED: SHADCN / UI SPLIT AUTHENTICATION GATEWAY ================= -->
+<div *ngIf="!isAuthenticated()" class="shadcn-split-layout">
+  <!-- Left Side: Hero Brand / Testimonial Panel -->
+  <div class="shadcn-hero-panel">
+    <div class="shadcn-hero-pattern"></div>
+    <div class="shadcn-brand-top">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shadcn-logo-icon">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+        <path d="M2 17l10 5 10-5"></path>
+        <path d="M2 12l10 5 10-5"></path>
+      </svg>
+      <span class="shadcn-brand-name">Nexus IDP Inc.</span>
+    </div>
+
+    <div class="shadcn-hero-footer">
+      <div class="shadcn-quote-card">
+        <p class="shadcn-quote-text">
+          &ldquo;This platform has completely transformed how our engineering teams scaffold, deploy, and monitor distributed microservices across multi-region Kubernetes clusters.&rdquo;
+        </p>
+        <div class="shadcn-quote-author">
+          <div class="author-name">Sofia Davis</div>
+          <div class="author-title">VP of Platform Engineering</div>
+        </div>
+      </div>
+
+      <div class="shadcn-compliance-badge">
+        <span class="status-dot"></span>
+        <span>Keycloak 24 IAM &bull; Realm: <strong>idp-realm</strong> &bull; PKCE S256</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Authentication Card -->
+  <div class="shadcn-auth-panel">
+    <div class="shadcn-auth-container">
+      <div class="shadcn-card-header">
+        <h1 class="shadcn-title">Welcome back</h1>
+        <p class="shadcn-subtitle">Enter your credentials below to access the Internal Developer Platform</p>
+      </div>
+
+      <div *ngIf="keycloakService.loginErrorSignal()" class="shadcn-alert shadcn-alert-error">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ keycloakService.loginErrorSignal() }}</span>
+      </div>
+
+      <!-- Official Keycloak OAuth2 Redirect Button (shadcn Primary) -->
+      <button type="button" (click)="redirectToKeycloak()" class="shadcn-btn-primary" style="margin-bottom:18px; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <polyline points="10 17 15 12 10 7"></polyline>
+          <line x1="15" y1="12" x2="3" y2="12"></line>
+        </svg>
+        Sign In with Keycloak SSO
+      </button>
+
+      <!-- shadcn Divider -->
+      <div class="shadcn-divider" style="margin: 12px 0 16px 0;">
+        <span class="shadcn-divider-line"></span>
+        <span class="shadcn-divider-text">Or continue with credentials</span>
+        <span class="shadcn-divider-line"></span>
+      </div>
+
+      <form (ngSubmit)="performKeycloakLogin()" class="shadcn-form">
+        <div class="shadcn-field">
+          <label class="shadcn-label">Email or Username</label>
+          <input type="text" [(ngModel)]="loginForm.username" name="gate_username" class="shadcn-input" placeholder="name@example.com or admin" required />
+        </div>
+
+        <div class="shadcn-field">
+          <div class="shadcn-label-row">
+            <label class="shadcn-label">Password</label>
+            <span class="shadcn-sublink">Keycloak 24</span>
+          </div>
+          <div class="shadcn-input-wrapper">
+            <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="loginForm.password" name="gate_password" class="shadcn-input" placeholder="••••••••••••" required />
+            <button type="button" (click)="toggleShowPassword()" class="shadcn-eye-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="!showPassword()">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="showPassword()">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-outline" style="width:100%; border-color:var(--zinc-800); background:rgba(255,255,255,0.04); color:var(--zinc-200); font-weight:600; padding:9px;">
+          Direct Sign In
         </button>
       </form>
 
-      <div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px;">
-        <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:8px; text-align:center;">Quick Role Switching:</div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-          <button (click)="quickDemoLogin('ADMIN')" class="btn btn-outline btn-sm">Admin</button>
-          <button (click)="quickDemoLogin('TECH_LEAD')" class="btn btn-outline btn-sm">Tech Lead</button>
-          <button (click)="quickDemoLogin('DEVELOPER')" class="btn btn-outline btn-sm">Developer</button>
-          <button (click)="quickDemoLogin('VIEWER')" class="btn btn-outline btn-sm">Viewer</button>
-        </div>
+      <!-- shadcn Divider for Personas -->
+      <div class="shadcn-divider" style="margin: 18px 0 14px 0;">
+        <span class="shadcn-divider-line"></span>
+        <span class="shadcn-divider-text">Or test with persona</span>
+        <span class="shadcn-divider-line"></span>
       </div>
+
+      <!-- Personas Grid -->
+      <div class="shadcn-personas-grid">
+        <button *ngFor="let persona of keycloakPersonas" type="button" (click)="selectPersona(persona)" class="shadcn-persona-btn">
+          <div class="persona-btn-top">
+            <span class="persona-name">{{ persona.name }}</span>
+            <span class="shadcn-badge" [ngClass]="'badge-' + persona.username.replace('_', '')">{{ persona.role }}</span>
+          </div>
+          <div class="persona-desc">{{ persona.username }} &bull; {{ persona.description }}</div>
+        </button>
+      </div>
+
+      <p class="shadcn-terms">
+        By continuing, you agree to our 
+        <a href="#" style="color:var(--zinc-300); text-decoration:underline;">Terms of Service</a> and 
+        <a href="#" style="color:var(--zinc-300); text-decoration:underline;">Privacy Policy</a>.
+      </p>
     </div>
   </div>
 </div>
