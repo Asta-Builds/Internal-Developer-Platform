@@ -724,22 +724,23 @@ export class AppComponent implements OnInit {
     this.keycloakService.redirectToKeycloak(loginHint);
   }
 
+  /**
+   * Prefills the form for a known persona and authenticates against Keycloak.
+   * A failed login is surfaced, never substituted with a locally forged session:
+   * the role shown in the UI must be the one the platform actually granted.
+   */
   selectPersona(persona: any): void {
     this.loginForm.username = persona.username;
     this.loginForm.password = persona.username === 'admin' ? 'adminpassword' : (persona.username + 'password');
     this.loginForm.role = persona.role;
-    
-    // Authenticate with real Keycloak token endpoint
+
     this.keycloakService.login(this.loginForm.username, this.loginForm.password).subscribe({
       next: (profile: KeycloakUserProfile) => {
         this.isKeycloakLoginOpen.set(false);
         this.catalogService.addLog('AUDIT', 'KEYCLOAK-SSO', `User '${profile.username}' authenticated with realm idp-realm (Role: ${this.currentUser().role})`);
       },
       error: () => {
-        // Instant fallback to persona role
-        this.keycloakService.loginWithRole(persona.role, persona.username);
-        this.isKeycloakLoginOpen.set(false);
-        this.catalogService.addLog('AUDIT', 'KEYCLOAK-SSO', `User '${persona.username}' authenticated via Persona Switcher with role: ${persona.role}`);
+        this.catalogService.addLog('ERROR', 'KEYCLOAK-SSO', `Authentication failed for '${persona.username}'. Verify the Keycloak realm is reachable and the account exists.`);
       }
     });
   }
@@ -747,23 +748,15 @@ export class AppComponent implements OnInit {
   performKeycloakLogin(): void {
     const username = this.loginForm.username || 'admin';
     const password = this.loginForm.password || 'adminpassword';
-    const selectedRole = this.loginForm.role;
 
     this.keycloakService.login(username, password).subscribe({
       next: (profile: KeycloakUserProfile) => {
         this.isKeycloakLoginOpen.set(false);
         this.catalogService.addLog('AUDIT', 'KEYCLOAK-SSO', `User '${profile.username}' verified via Keycloak OAuth2 PKCE (Role: ${this.currentUser().role})`);
       },
-      error: (err) => {
-        // If credentials match known role persona, fallback gracefully
-        const matchedPersona = this.keycloakPersonas.find(p => p.username === username.toLowerCase());
-        if (matchedPersona) {
-          this.selectPersona(matchedPersona);
-        } else {
-          this.keycloakService.loginWithRole(selectedRole as any, username);
-          this.isKeycloakLoginOpen.set(false);
-          this.catalogService.addLog('AUDIT', 'KEYCLOAK-SSO', `User '${username}' authenticated (Role: ${selectedRole})`);
-        }
+      error: () => {
+        // The error text is already surfaced through keycloakService.loginErrorSignal().
+        this.catalogService.addLog('ERROR', 'KEYCLOAK-SSO', `Authentication failed for '${username}'. Credentials rejected by Keycloak.`);
       }
     });
   }

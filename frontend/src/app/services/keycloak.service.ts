@@ -245,31 +245,15 @@ export class KeycloakService {
   }
 
   /**
-   * One-Click Persona Authenticator
+   * NOTE: the former `loginWithRole()` persona shortcut was removed.
+   *
+   * It fabricated a session with a random string in place of a token and a
+   * client-chosen role array. Since the backend now verifies the token signature and
+   * resolves the role from its own `users` table, such a session was rejected on the
+   * first API call — and, more importantly, a client-asserted role has never been a
+   * legitimate way to obtain access. Use `login()` or `redirectToKeycloak()` instead;
+   * the platform assigns the role.
    */
-  loginWithRole(role: 'ADMIN' | 'TECH_LEAD' | 'DEVELOPER' | 'VIEWER', customUsername?: string): void {
-    const username = customUsername || role.toLowerCase();
-    const roleMapping: Record<string, string[]> = {
-      ADMIN: ['ADMIN', 'TECH_LEAD', 'DEVELOPER', 'VIEWER'],
-      TECH_LEAD: ['TECH_LEAD', 'DEVELOPER', 'VIEWER'],
-      DEVELOPER: ['DEVELOPER', 'VIEWER'],
-      VIEWER: ['VIEWER']
-    };
-
-    const user: KeycloakUserProfile = {
-      username: username,
-      email: `${username}@company.internal`,
-      firstName: role === 'ADMIN' ? 'Platform' : (role === 'TECH_LEAD' ? 'Alex' : 'Dev'),
-      lastName: role === 'ADMIN' ? 'Admin' : (role === 'TECH_LEAD' ? 'Vance' : 'Engineer'),
-      roles: roleMapping[role] || [role],
-      isAuthenticated: true,
-      token: 'jwt-token-idp-realm-' + Math.random().toString(36).substring(2, 10)
-    };
-
-    this.currentUserSignal.set(user);
-    this.loginErrorSignal.set(null);
-    localStorage.setItem('idp_keycloak_user', JSON.stringify(user));
-  }
 
   /**
    * Logs out and terminates Keycloak session

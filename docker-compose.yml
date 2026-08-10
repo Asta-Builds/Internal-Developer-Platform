@@ -110,7 +110,15 @@ services:
       SPRING_REDIS_PORT: 6379
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8180/realms/idp-realm
+      # Tokens are issued to a browser talking to localhost:8180, so that is the
+      # issuer the backend must validate. Keys, however, are fetched over the Docker
+      # network where Keycloak answers to "keycloak" — hence the two separate URIs.
+      IDP_SECURITY_ISSUER_URI: http://localhost:8180/realms/idp-realm
+      IDP_SECURITY_JWK_SET_URI: http://keycloak:8180/realms/idp-realm/protocol/openid-connect/certs
+      # Seeded realm personas (tech_lead/developer/viewer) have no internal user row
+      # until an ADMIN creates one; allow first-login provisioning in this dev stack.
+      IDP_SECURITY_AUTO_PROVISION: "true"
+      IDP_SECURITY_CORS_ORIGINS: http://localhost:4200,http://localhost
     depends_on:
       postgres:
         condition: service_healthy

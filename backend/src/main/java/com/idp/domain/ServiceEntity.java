@@ -35,6 +35,10 @@ public class ServiceEntity {
     @Builder.Default
     private String environment = "PROD";
 
+    /** STANDARD or TIER_1. Tier-1 resources attract stricter ABAC gating. */
+    @Builder.Default
+    private String criticality = "STANDARD";
+
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ApiEndpointEntity> exposedApis = new ArrayList<>();
