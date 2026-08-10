@@ -914,16 +914,10 @@ export class CatalogService {
     return of({ success: true, service: newService });
   }
 
-  evalAbacPolicy(role: string, team: string, env: string, criticality: string, action: string): Observable<any> {
-    const isAllowed = role === 'ADMIN' || (role === 'TECH_LEAD' && env !== 'PROD') || (role === 'DEVELOPER' && action === 'SCAFFOLD_PROJECT');
-    return of({
-      allowed: isAllowed,
-      role,
-      action,
-      env,
-      evaluatedAt: new Date().toLocaleTimeString()
-    });
-  }
+  // NOTE: evalAbacPolicy() was removed. It decided access in the browser from a
+  // one-line expression over a caller-supplied role, so it agreed with the real
+  // engine only by coincidence. Policy evaluation now happens server-side via
+  // AdminService.simulate() -> POST /api/v1/admin/policies/simulate.
 
   // Authenticated SSE stream (see SseClient for why EventSource is not used).
   connectLiveLogStream(): Observable<any> {
