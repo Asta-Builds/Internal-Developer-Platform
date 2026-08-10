@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CatalogService, ServiceItem, ScaffoldJob, FeatureFlag, AuditLogEntry, CopilotChatResponse, LiveLogEvent, BatchCanaryResult } from './services/catalog.service';
 import { KeycloakService, KeycloakUserProfile } from './services/keycloak.service';
+import { AdminService, PlatformRole, PlatformUser, AbacPolicy } from './services/admin.service';
 
 export interface ChatMessage {
   sender: 'USER' | 'COPILOT';
@@ -93,15 +94,30 @@ export class AppComponent implements OnInit {
   ]);
   isCopilotLoading = signal<boolean>(false);
 
-  // ABAC Policy Sandbox State
-  abacTest = {
-    role: 'TECH_LEAD',
-    team: 'Equipe Platform',
-    env: 'PROD',
-    criticality: 'HIGH',
-    action: 'MUTATE_FEATURE_FLAGS'
+  /**
+   * Policy simulator state.
+   *
+   * The subject is a stored user id, not a self-declared role: the backend resolves
+   * the role, team and resource attributes itself. The previous sandbox let the
+   * caller assert its own role, which made the verdict meaningless.
+   */
+  simulation = {
+    userId: '',
+    resourceType: 'SERVICE',
+    action: 'DELETE',
+    resourceId: 'srv-payment',
+    rolloutPercent: null as number | null
   };
-  abacEvalResult = signal<any>(null);
+
+  /** Draft row for granting a new permission into the RBAC matrix. */
+  newPermission = {
+    role: 'DEVELOPER' as PlatformRole,
+    resourceType: 'SERVICE',
+    action: 'READ'
+  };
+
+  /** Pending per-user edits, keyed by user id, so rows stay independent. */
+  userEdits: Record<string, { role: PlatformRole; team: string }> = {};
 
   // Keycloak SSO Auth State
   isAuthenticated = computed(() => this.keycloakService.currentUserSignal().isAuthenticated);
@@ -390,7 +406,8 @@ export class AppComponent implements OnInit {
 
   constructor(
     public catalogService: CatalogService,
-    public keycloakService: KeycloakService
+    public keycloakService: KeycloakService,
+    public adminService: AdminService
   ) {}
 
   ngOnInit(): void {
@@ -420,6 +437,10 @@ export class AppComponent implements OnInit {
       this.catalogService.loadGitHubRepositories();
     } else if (tab === 'feature-flags') {
       this.runBatchCanaryTest();
+    } else if (tab === 'governance') {
+      // Users and policies are ADMIN-only; the service surfaces a 403 as a notice
+      // rather than an error, since a refusal is a legitimate outcome here.
+      this.adminService.loadAll();
     }
   }
 
@@ -694,16 +715,95 @@ export class AppComponent implements OnInit {
     });
   }
 
-  evaluateAbac(): void {
-    this.catalogService.evalAbacPolicy(
-      this.abacTest.role,
-      this.abacTest.team,
-      this.abacTest.env,
-      this.abacTest.criticality,
-      this.abacTest.action
-    ).subscribe(res => {
-      this.abacEvalResult.set(res);
+  // ---------------------------------------------------------------- RBAC / ABAC admin
+
+  /** Runs the decision against the real engine for a stored user. */
+  runSimulation(): void {
+    if (!this.simulation.userId) {
+      return;
+    }
+    this.adminService.simulate({
+      userId: this.simulation.userId,
+      resourceType: this.simulation.resourceType,
+      action: this.simulation.action,
+      resourceId: this.simulation.resourceId || undefined,
+      rolloutPercent: this.simulation.rolloutPercent ?? undefined
     });
+  }
+
+  /** Seeds the per-row edit state the first time a user row is touched. */
+  editFor(user: PlatformUser): { role: PlatformRole; team: string } {
+    if (!this.userEdits[user.id]) {
+      this.userEdits[user.id] = { role: user.role, team: user.team || '' };
+    }
+    return this.userEdits[user.id];
+  }
+
+  saveUserRole(user: PlatformUser): void {
+    const edit = this.editFor(user);
+    this.adminService.updateUserRole(user.id, edit.role, edit.team || null).subscribe({
+      next: updated => this.catalogService.addLog('AUDIT', 'RBAC',
+        `Role for '${updated.username}' set to ${updated.role} (team: ${updated.team || 'unassigned'})`),
+      error: () => this.catalogService.addLog('ERROR', 'RBAC',
+        `Role change refused for '${user.username}' — ADMIN required`)
+    });
+  }
+
+  toggleUserActive(user: PlatformUser): void {
+    this.adminService.updateUserStatus(user.id, !user.active).subscribe({
+      next: updated => this.catalogService.addLog('AUDIT', 'RBAC',
+        `Account '${updated.username}' ${updated.active ? 'reactivated' : 'deactivated'}`),
+      error: () => this.catalogService.addLog('ERROR', 'RBAC', 'Status change refused — ADMIN required')
+    });
+  }
+
+  grantPermission(): void {
+    const p = this.newPermission;
+    this.adminService.grantPermission(p.role, p.resourceType, p.action).subscribe({
+      next: () => this.catalogService.addLog('AUDIT', 'RBAC',
+        `Granted ${p.action} on ${p.resourceType} to ${p.role}`),
+      error: err => this.catalogService.addLog('ERROR', 'RBAC',
+        err.status === 400 ? `${p.role} already holds that permission` : 'Grant refused — ADMIN required')
+    });
+  }
+
+  revokePermission(role: string, label: string): void {
+    // Matrix labels arrive as ACTION_RESOURCE_TYPE, e.g. DELETE_FEATURE_FLAG.
+    const action = label.split('_')[0];
+    const resourceType = label.substring(action.length + 1);
+    this.adminService.revokePermission(role as PlatformRole, resourceType, action).subscribe({
+      next: () => this.catalogService.addLog('AUDIT', 'RBAC',
+        `Revoked ${action} on ${resourceType} from ${role}`),
+      error: () => this.catalogService.addLog('ERROR', 'RBAC', 'Revoke refused — ADMIN required')
+    });
+  }
+
+  togglePolicy(policy: AbacPolicy): void {
+    this.adminService.togglePolicy(policy.id, !policy.enabled).subscribe({
+      next: updated => this.catalogService.addLog('AUDIT', 'ABAC',
+        `Policy '${updated.name}' ${updated.enabled ? 'enabled' : 'disabled'}`),
+      error: () => this.catalogService.addLog('ERROR', 'ABAC', 'Policy change refused — ADMIN required')
+    });
+  }
+
+  /** Human-readable summary of the conditions a policy constrains. */
+  policyConditions(policy: AbacPolicy): string[] {
+    const conditions: string[] = [];
+    if (policy.requireSameTeam) { conditions.push('same owning team'); }
+    if (policy.minRole) { conditions.push(`exempt at ${policy.minRole}+`); }
+    if (policy.environment) { conditions.push(`env = ${policy.environment}`); }
+    if (policy.criticality) { conditions.push(`criticality = ${policy.criticality}`); }
+    if (policy.maxRolloutPercent !== null) { conditions.push(`rollout > ${policy.maxRolloutPercent}%`); }
+    if (policy.requireCorporateIp) { conditions.push('corporate IP'); }
+    return conditions.length ? conditions : ['always applies'];
+  }
+
+  matrixRoles(): string[] {
+    return Object.keys(this.adminService.matrixSignal());
+  }
+
+  permissionsFor(role: string): string[] {
+    return this.adminService.matrixSignal()[role] || [];
   }
 
   // Keycloak SSO Auth

@@ -845,45 +845,269 @@
           </div>
         </div>
 
-        <!-- ABAC Policy Engine Live Sandbox -->
-        <div class="glass-panel" style="max-width:800px;">
-          <h3 style="font-family:var(--font-heading); margin-bottom:14px; font-size:1.15rem;">ABAC &amp; OPA Policy Engine Sandbox</h3>
-          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:14px; margin-bottom:18px;">
-            <div>
-              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Role</label>
-              <select [(ngModel)]="abacTest.role" class="select-input" style="width:100%;">
-                <option value="ADMIN">ADMIN</option>
-                <option value="TECH_LEAD">TECH_LEAD</option>
-                <option value="DEVELOPER">DEVELOPER</option>
-                <option value="VIEWER">VIEWER</option>
-              </select>
-            </div>
+        <!-- ================= RBAC / ABAC ADMINISTRATION ================= -->
+        <!-- Every panel below edits platform tables. Keycloak holds no permission
+             data and is never contacted from here. -->
 
+        <div *ngIf="adminService.accessDeniedSignal()" class="glass-panel"
+             style="margin-bottom:28px; border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.08);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
             <div>
-              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Target Environment</label>
-              <select [(ngModel)]="abacTest.env" class="select-input" style="width:100%;">
-                <option value="PROD">PROD</option>
-                <option value="STAGING">STAGING</option>
-                <option value="DEV">DEV</option>
-              </select>
+              <div style="font-weight:700; color:#f87171;">Authorization administration requires ADMIN</div>
+              <div style="font-size:0.82rem; color:var(--heroui-text-muted); margin-top:2px;">
+                Signed in as <strong>{{ currentUser().username }}</strong> ({{ currentUser().role }}).
+                The refusal was evaluated by the platform engine and written to the audit ledger above.
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div>
-              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Operation</label>
-              <select [(ngModel)]="abacTest.action" class="select-input" style="width:100%;">
-                <option value="MUTATE_FEATURE_FLAGS">MUTATE_FEATURE_FLAGS</option>
-                <option value="DELETE_SERVICE">DELETE_SERVICE</option>
-                <option value="SCAFFOLD_PROJECT">SCAFFOLD_PROJECT</option>
-              </select>
+        <!-- ---------- Users and role assignment ---------- -->
+        <div class="glass-panel" style="margin-bottom:28px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0;">Platform Users &amp; Role Assignment</h3>
+            <button (click)="adminService.loadAll()" class="btn btn-outline btn-sm">Refresh</button>
+          </div>
+          <p style="font-size:0.82rem; color:var(--heroui-text-muted); margin:0 0 14px;">
+            The role stored here is the authority for every access decision. A role asserted by a
+            Keycloak token is recorded as drift and ignored.
+          </p>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Platform Role</th>
+                  <th>Team (ABAC ownership)</th>
+                  <th>Keycloak Subject</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of adminService.usersSignal()">
+                  <td>
+                    <div style="font-weight:700;">{{ user.username }}</div>
+                    <div style="font-size:0.74rem; color:var(--heroui-text-dim);">{{ user.id }}</div>
+                  </td>
+                  <td>
+                    <select [(ngModel)]="editFor(user).role" class="select-input" style="width:130px;">
+                      <option *ngFor="let r of adminService.roles" [value]="r">{{ r }}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input [(ngModel)]="editFor(user).team" class="select-input" style="width:170px;"
+                           placeholder="unassigned" />
+                  </td>
+                  <td>
+                    <code *ngIf="user.keycloakSubject" style="font-size:0.74rem; color:#94a3b8;">{{ user.keycloakSubject }}</code>
+                    <span *ngIf="!user.keycloakSubject" style="font-size:0.74rem; color:var(--heroui-text-dim);">never signed in</span>
+                  </td>
+                  <td>
+                    <span [style.color]="user.active ? '#34d399' : '#f87171'" style="font-weight:700; font-size:0.78rem;">
+                      {{ user.active ? 'ACTIVE' : 'REVOKED' }}
+                    </span>
+                  </td>
+                  <td style="white-space:nowrap;">
+                    <button (click)="saveUserRole(user)" class="btn btn-primary btn-sm" style="margin-right:6px;">Save</button>
+                    <button (click)="toggleUserActive(user)" class="btn btn-outline btn-sm">
+                      {{ user.active ? 'Revoke' : 'Restore' }}
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="adminService.usersSignal().length === 0">
+                  <td colspan="6" style="text-align:center; color:var(--heroui-text-dim); padding:18px;">
+                    No users loaded.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ---------- Live RBAC matrix ---------- -->
+        <div class="glass-panel" style="margin-bottom:28px;">
+          <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0 0 6px;">RBAC Permission Matrix</h3>
+          <p style="font-size:0.82rem; color:var(--heroui-text-muted); margin:0 0 14px;">
+            Read live from the <code>role_permissions</code> table — this is the matrix the engine
+            actually enforces, not a copy of it. Stage one of every decision.
+          </p>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-bottom:18px;">
+            <div *ngFor="let role of matrixRoles()" style="background:var(--heroui-content2); border-radius:8px; padding:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <strong style="font-family:var(--font-heading);">{{ role }}</strong>
+                <span style="font-size:0.72rem; color:var(--heroui-text-dim);">{{ permissionsFor(role).length }} grants</span>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                <span *ngFor="let perm of permissionsFor(role)"
+                      (click)="revokePermission(role, perm)"
+                      title="Click to revoke this grant"
+                      style="font-size:0.68rem; font-family:var(--font-code); background:rgba(99,102,241,0.16); color:#a5b4fc; padding:2px 7px; border-radius:4px; cursor:pointer;">
+                  {{ perm }}
+                </span>
+                <span *ngIf="permissionsFor(role).length === 0" style="font-size:0.74rem; color:var(--heroui-text-dim);">
+                  no grants — deny by default
+                </span>
+              </div>
             </div>
           </div>
 
-          <button (click)="evaluateAbac()" class="btn btn-primary btn-sm">Evaluate ABAC Policy</button>
+          <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Role</label>
+              <select [(ngModel)]="newPermission.role" class="select-input">
+                <option *ngFor="let r of adminService.roles" [value]="r">{{ r }}</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Resource</label>
+              <select [(ngModel)]="newPermission.resourceType" class="select-input">
+                <option *ngFor="let t of adminService.resourceTypes" [value]="t">{{ t }}</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Action</label>
+              <select [(ngModel)]="newPermission.action" class="select-input">
+                <option *ngFor="let a of adminService.actions" [value]="a">{{ a }}</option>
+              </select>
+            </div>
+            <button (click)="grantPermission()" class="btn btn-primary btn-sm">Grant Permission</button>
+          </div>
+        </div>
 
-          <div *ngIf="abacEvalResult()" style="margin-top:14px; padding:12px; background:var(--heroui-content2); border-radius:6px; font-family:var(--font-code); font-size:0.85rem;">
-            Decision: <strong [style.color]="abacEvalResult()?.allowed ? '#34d399' : '#ef4444'">
-              {{ abacEvalResult()?.allowed ? 'ALLOW (Access Granted)' : 'DENY (Access Blocked by Policy)' }}
-            </strong>
+        <!-- ---------- ABAC policies ---------- -->
+        <div class="glass-panel" style="margin-bottom:28px;">
+          <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0 0 6px;">ABAC Contextual Policies</h3>
+          <p style="font-size:0.82rem; color:var(--heroui-text-muted); margin:0 0 14px;">
+            Stage two. Evaluated in priority order over the resource attributes read from the
+            database; a matching <code>DENY</code> overrides the RBAC grant.
+          </p>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Policy</th>
+                  <th>Applies To</th>
+                  <th>Effect</th>
+                  <th>Conditions</th>
+                  <th>Enabled</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let policy of adminService.policiesSignal()" [style.opacity]="policy.enabled ? 1 : 0.45">
+                  <td><code>{{ policy.priority }}</code></td>
+                  <td>
+                    <div style="font-weight:700;">{{ policy.name }}</div>
+                    <div style="font-size:0.74rem; color:var(--heroui-text-dim); max-width:320px;">{{ policy.description }}</div>
+                  </td>
+                  <td><code style="font-size:0.76rem;">{{ policy.action }} on {{ policy.resourceType }}</code></td>
+                  <td>
+                    <span [style.color]="policy.effect === 'DENY' ? '#f87171' : '#34d399'" style="font-weight:700; font-size:0.78rem;">
+                      {{ policy.effect }}
+                    </span>
+                  </td>
+                  <td>
+                    <span *ngFor="let cond of policyConditions(policy)"
+                          style="display:inline-block; font-size:0.68rem; font-family:var(--font-code); background:rgba(148,163,184,0.14); color:#cbd5e1; padding:2px 6px; border-radius:4px; margin:2px 3px 2px 0;">
+                      {{ cond }}
+                    </span>
+                  </td>
+                  <td>
+                    <button (click)="togglePolicy(policy)" class="btn btn-outline btn-sm">
+                      {{ policy.enabled ? 'Disable' : 'Enable' }}
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="adminService.policiesSignal().length === 0">
+                  <td colspan="6" style="text-align:center; color:var(--heroui-text-dim); padding:18px;">
+                    No policies loaded.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ---------- Policy simulator ---------- -->
+        <div class="glass-panel">
+          <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0 0 6px;">Policy Simulator</h3>
+          <p style="font-size:0.82rem; color:var(--heroui-text-muted); margin:0 0 14px;">
+            Dry-runs a decision through the real engine for a stored user. The subject is chosen by
+            id and the resource attributes are read server-side, so nothing is caller-asserted.
+            Evaluation is side-effect free and writes no audit entry.
+          </p>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:18px;">
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Subject</label>
+              <select [(ngModel)]="simulation.userId" class="select-input" style="width:100%;">
+                <option value="">Select a user…</option>
+                <option *ngFor="let u of adminService.usersSignal()" [value]="u.id">
+                  {{ u.username }} ({{ u.role }})
+                </option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Resource Type</label>
+              <select [(ngModel)]="simulation.resourceType" class="select-input" style="width:100%;">
+                <option *ngFor="let t of adminService.resourceTypes" [value]="t">{{ t }}</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Action</label>
+              <select [(ngModel)]="simulation.action" class="select-input" style="width:100%;">
+                <option *ngFor="let a of adminService.actions" [value]="a">{{ a }}</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Resource ID</label>
+              <input [(ngModel)]="simulation.resourceId" class="select-input" style="width:100%;" placeholder="srv-payment" />
+            </div>
+            <div>
+              <label style="font-size:0.78rem; color:var(--heroui-text-muted); display:block; margin-bottom:4px;">Rollout % (optional)</label>
+              <input [(ngModel)]="simulation.rolloutPercent" type="number" min="0" max="100"
+                     class="select-input" style="width:100%;" placeholder="—" />
+            </div>
+          </div>
+
+          <button (click)="runSimulation()" class="btn btn-primary btn-sm" [disabled]="!simulation.userId">
+            Evaluate Against Live Policy Engine
+          </button>
+
+          <div *ngIf="adminService.simulationSignal() as result"
+               style="margin-top:16px; padding:14px; background:var(--heroui-content2); border-radius:8px;"
+               [style.borderLeft]="result.granted ? '3px solid #34d399' : '3px solid #f87171'">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+              <strong [style.color]="result.granted ? '#34d399' : '#f87171'" style="font-size:1rem;">
+                {{ result.granted ? 'ALLOW' : 'DENY' }}
+              </strong>
+              <span style="font-size:0.74rem; font-family:var(--font-code); background:rgba(99,102,241,0.16); color:#a5b4fc; padding:2px 8px; border-radius:4px;">
+                decided at stage: {{ result.stage }}
+              </span>
+              <span *ngIf="result.policyId" style="font-size:0.74rem; font-family:var(--font-code); color:var(--heroui-text-dim);">
+                policy {{ result.policyId }}
+              </span>
+            </div>
+
+            <div style="font-size:0.85rem; margin-bottom:10px;">{{ result.reason }}</div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:0.76rem; color:var(--heroui-text-muted); font-family:var(--font-code);">
+              <span>subject: <strong style="color:#cbd5e1;">{{ result.subject.username }}</strong> / {{ result.subject.role }}
+                <ng-container *ngIf="result.subject.team"> / {{ result.subject.team }}</ng-container>
+              </span>
+              <span *ngIf="result.resource.ownerTeam">ownerTeam: <strong style="color:#cbd5e1;">{{ result.resource.ownerTeam }}</strong></span>
+              <span *ngIf="result.resource.environment">env: <strong style="color:#cbd5e1;">{{ result.resource.environment }}</strong></span>
+              <span *ngIf="result.resource.criticality">criticality: <strong style="color:#cbd5e1;">{{ result.resource.criticality }}</strong></span>
+            </div>
           </div>
         </div>
       </section>
