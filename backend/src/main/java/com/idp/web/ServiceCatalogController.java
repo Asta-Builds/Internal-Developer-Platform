@@ -4,6 +4,7 @@ import com.idp.domain.ServiceEntity;
 import com.idp.repository.ServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,12 +14,12 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/catalog")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ServiceCatalogController {
 
     private final ServiceRepository serviceRepository;
 
     @GetMapping("/services")
+    @PreAuthorize("hasPermission(null, 'SERVICE', 'READ')")
     public ResponseEntity<List<ServiceEntity>> getServices(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String techStack,
@@ -51,6 +52,7 @@ public class ServiceCatalogController {
     }
 
     @GetMapping("/services/{id}")
+    @PreAuthorize("hasPermission(#id, 'SERVICE', 'READ')")
     public ResponseEntity<ServiceEntity> getServiceById(@PathVariable String id) {
         return serviceRepository.findById(id)
                 .map(ResponseEntity::ok)
@@ -58,6 +60,7 @@ public class ServiceCatalogController {
     }
 
     @GetMapping("/teams")
+    @PreAuthorize("hasPermission(null, 'SERVICE', 'READ')")
     public ResponseEntity<List<String>> getOwnerTeams() {
         List<String> teams = serviceRepository.findAll().stream()
                 .map(ServiceEntity::getOwnerTeam)
@@ -69,6 +72,7 @@ public class ServiceCatalogController {
     }
 
     @GetMapping("/stats")
+    @PreAuthorize("hasPermission(null, 'SERVICE', 'READ')")
     public ResponseEntity<Map<String, Object>> getCatalogStats() {
         List<ServiceEntity> services = serviceRepository.findAll();
 

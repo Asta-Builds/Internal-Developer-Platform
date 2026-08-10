@@ -11,7 +11,8 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:}
   h2:
     console:
-      enabled: true
+      # Off by default: the console bypasses bearer-token auth entirely.
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   flyway:
     enabled: true
@@ -57,8 +58,27 @@ spring:
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=15m
 
-# Custom IDP Scaling Queue Properties
+# Custom IDP Properties
 idp:
+  # Authorization is computed here, never in Keycloak. Keycloak only signs the token;
+  # these settings govern how that token is verified and mapped to an internal user.
+  security:
+    issuer-uri: ${IDP_SECURITY_ISSUER_URI:${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8180/realms/idp-realm}}
+    # Derived from issuer-uri when left blank.
+    jwk-set-uri: ${IDP_SECURITY_JWK_SET_URI:}
+    # Least-privilege role granted on a first login with no internal record.
+    default-role-on-provision: ${IDP_SECURITY_DEFAULT_ROLE:VIEWER}
+    # Secure by default: a token for a principal with no internal user record is
+    # refused rather than silently granted a VIEWER account. Set true only for local
+    # development against a throwaway realm.
+    auto-provision-unknown-users: ${IDP_SECURITY_AUTO_PROVISION:false}
+    # Backs the require_corporate_ip ABAC condition. Tighten per environment.
+    corporate-ip-ranges: ${IDP_SECURITY_CORPORATE_IP_RANGES:127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    h2-console:
+      enabled: ${H2_CONSOLE_ENABLED:false}
+    cors:
+      allowed-origins: ${IDP_SECURITY_CORS_ORIGINS:http://localhost:4200,http://localhost:80,http://localhost}
+
   queues:
     fraud-analysis: fraud.analysis.queue
     fraud-result: fraud.result.queue

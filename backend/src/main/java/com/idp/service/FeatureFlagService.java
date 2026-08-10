@@ -2,6 +2,7 @@ package com.idp.service;
 
 import com.idp.domain.FeatureFlagEntity;
 import com.idp.repository.FeatureFlagRepository;
+import com.idp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -36,7 +37,7 @@ public class FeatureFlagService {
         }
         flag.setUpdatedAt(LocalDateTime.now());
         FeatureFlagEntity saved = flagRepository.save(flag);
-        auditService.logAction("admin", "FEATURE_FLAG_CREATED", saved.getKey(), "Created feature flag " + saved.getKey());
+        auditService.logAction(currentActor(), "FEATURE_FLAG_CREATED", saved.getKey(), "Created feature flag " + saved.getKey());
         publishFlagUpdateEvent("CREATED", saved);
         return saved;
     }
@@ -49,7 +50,7 @@ public class FeatureFlagService {
         flag.setEnabled(!flag.isEnabled());
         flag.setUpdatedAt(LocalDateTime.now());
         FeatureFlagEntity saved = flagRepository.save(flag);
-        auditService.logAction("admin", "FEATURE_FLAG_TOGGLED", saved.getKey(), "Flag status changed to " + saved.isEnabled());
+        auditService.logAction(currentActor(), "FEATURE_FLAG_TOGGLED", saved.getKey(), "Flag status changed to " + saved.isEnabled());
         publishFlagUpdateEvent("TOGGLED", saved);
         return saved;
     }
@@ -62,7 +63,7 @@ public class FeatureFlagService {
         flag.setRolloutPercent(Math.min(100, Math.max(0, rolloutPercent)));
         flag.setUpdatedAt(LocalDateTime.now());
         FeatureFlagEntity saved = flagRepository.save(flag);
-        auditService.logAction("admin", "FEATURE_FLAG_ROLLOUT_UPDATED", saved.getKey(), "Canary rollout percentage set to " + saved.getRolloutPercent() + "%");
+        auditService.logAction(currentActor(), "FEATURE_FLAG_ROLLOUT_UPDATED", saved.getKey(), "Canary rollout percentage set to " + saved.getRolloutPercent() + "%");
         publishFlagUpdateEvent("ROLLOUT_UPDATED", saved);
         return saved;
     }
@@ -71,6 +72,24 @@ public class FeatureFlagService {
     @CacheEvict(value = "feature_flags", allEntries = true)
     public FeatureFlagEntity updateRollout(String id, int rolloutPercent) {
         return updateRolloutPercent(id, rolloutPercent);
+    }
+
+    @Transactional
+    @CacheEvict(value = "feature_flags", allEntries = true)
+    public void deleteFlag(String id) {
+        FeatureFlagEntity flag = flagRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Feature flag not found: " + id));
+        flagRepository.delete(flag);
+        auditService.logAction(currentActor(), "FEATURE_FLAG_DELETED", flag.getKey(),
+                "Removed feature flag " + flag.getKey());
+        publishFlagUpdateEvent("DELETED", flag);
+    }
+
+    /** Resolves the acting user so the audit trail names a real principal. */
+    private String currentActor() {
+        return CurrentUser.get()
+                .map(user -> user.toActorId())
+                .orElse("system");
     }
 
     private void publishFlagUpdateEvent(String action, FeatureFlagEntity flag) {

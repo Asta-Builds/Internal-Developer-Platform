@@ -1,6 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
+import { SseClient } from './sse.client';
 
 export interface ApiEndpoint {
   id?: string;
@@ -105,6 +106,9 @@ export interface BatchCanaryResult {
 })
 export class CatalogService {
   private baseUrl = 'http://localhost:8088/api/v1';
+
+  /** Authenticated SSE transport; EventSource cannot attach the bearer token. */
+  private sseClient = inject(SseClient);
 
   // Reactive State Signals
   servicesSignal = signal<ServiceItem[]>([]);
@@ -619,34 +623,30 @@ export class CatalogService {
 
   subscribeScaffoldStream(jobId: string): Observable<ScaffoldJob> {
     return new Observable(observer => {
-      let eventSource: EventSource | null = null;
-      try {
-        eventSource = new EventSource(`${this.baseUrl}/scaffold/jobs/${jobId}/stream`);
-        
-        eventSource.addEventListener('JOB_PROGRESS', (event: any) => {
-          try {
-            const data = JSON.parse(event.data);
-            observer.next(data);
-            if (data.status === 'COMPLETED' || data.status === 'FAILED') {
-              eventSource?.close();
-              observer.complete();
+      // Read through SseClient rather than EventSource: the endpoint requires a
+      // bearer token, which EventSource cannot send.
+      const subscription = this.sseClient
+        .stream(`${this.baseUrl}/scaffold/jobs/${jobId}/stream`)
+        .subscribe({
+          next: message => {
+            if (message.event !== 'JOB_PROGRESS') {
+              return;
             }
-          } catch (e) {
-            observer.error(e);
-          }
+            try {
+              const data = JSON.parse(message.data);
+              observer.next(data);
+              if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+                observer.complete();
+              }
+            } catch (e) {
+              observer.error(e);
+            }
+          },
+          error: err => observer.error(err),
+          complete: () => observer.complete()
         });
 
-        eventSource.onerror = (error) => {
-          observer.error(error);
-          eventSource?.close();
-        };
-      } catch (err) {
-        observer.error(err);
-      }
-
-      return () => {
-        if (eventSource) eventSource.close();
-      };
+      return () => subscription.unsubscribe();
     });
   }
 
@@ -925,28 +925,27 @@ export class CatalogService {
     });
   }
 
-  // SSE EventSource Stream
+  // Authenticated SSE stream (see SseClient for why EventSource is not used).
   connectLiveLogStream(): Observable<any> {
     return new Observable(observer => {
-      let eventSource: EventSource | null = null;
-      try {
-        eventSource = new EventSource(`${this.baseUrl}/telemetry/logs/stream`);
-        eventSource.addEventListener('log', (event: any) => {
-          try {
-            const data = JSON.parse(event.data);
-            observer.next(data);
-          } catch {
-            observer.next({ message: event.data });
-          }
+      const subscription = this.sseClient
+        .stream(`${this.baseUrl}/telemetry/logs/stream`)
+        .subscribe({
+          next: message => {
+            if (message.event !== 'log') {
+              return;
+            }
+            try {
+              observer.next(JSON.parse(message.data));
+            } catch {
+              observer.next({ message: message.data });
+            }
+          },
+          error: err => observer.error(err),
+          complete: () => observer.complete()
         });
-        eventSource.onerror = error => observer.error(error);
-      } catch (err) {
-        observer.error(err);
-      }
 
-      return () => {
-        if (eventSource) eventSource.close();
-      };
+      return () => subscription.unsubscribe();
     });
   }
 }
