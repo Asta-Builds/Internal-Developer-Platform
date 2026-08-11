@@ -1,22 +1,59 @@
 /* ==========================================================================
-   SHADCN / UI THEME FOR KEYCLOAK (Minimalist Monochromatic Dark Mode)
+   HERO UI THEME FOR KEYCLOAK (Vibrant Glassmorphic & Modern Dark Mode)
+   Inspired by HeroUI (formerly NextUI) Design System
    ========================================================================== */
 
 :root {
-  --zinc-950: #09090b;
-  --zinc-900: #18181b;
-  --zinc-800: #27272a;
-  --zinc-700: #3f3f46;
-  --zinc-600: #52525b;
-  --zinc-500: #71717a;
-  --zinc-400: #a1a1aa;
-  --zinc-300: #d4d4d8;
-  --zinc-200: #e4e4e7;
-  --zinc-100: #f4f4f5;
-  --zinc-50: #fafafa;
+  /* HeroUI Color Palette */
+  --heroui-background: #000000;
+  --heroui-content1: #111115;
+  --heroui-content2: #18181b;
+  --heroui-content3: #27272a;
+  --heroui-content4: #3f3f46;
+  
+  --heroui-foreground: #ecedee;
+  --heroui-foreground-muted: #a1a1aa;
+  --heroui-foreground-subtle: #71717a;
 
+  /* HeroUI Accents */
+  --heroui-primary: #006fee;
+  --heroui-primary-hover: #005bc4;
+  --heroui-primary-active: #004493;
+  --heroui-primary-50: rgba(0, 111, 238, 0.12);
+  --heroui-primary-100: rgba(0, 111, 238, 0.22);
+  
+  --heroui-secondary: #7828c8;
+  --heroui-secondary-gradient: linear-gradient(135deg, #006fee 0%, #7828c8 50%, #ff4ecd 100%);
+  --heroui-hero-glow: radial-gradient(circle at 50% 30%, rgba(0, 111, 238, 0.22) 0%, rgba(120, 40, 200, 0.15) 35%, transparent 70%);
+
+  /* Status Colors */
+  --heroui-success: #17c964;
+  --heroui-success-bg: rgba(23, 201, 100, 0.12);
+  --heroui-warning: #f5a524;
+  --heroui-warning-bg: rgba(245, 165, 36, 0.12);
+  --heroui-danger: #f31260;
+  --heroui-danger-bg: rgba(243, 18, 96, 0.12);
+
+  /* Borders & Radii */
+  --heroui-border: rgba(255, 255, 255, 0.08);
+  --heroui-border-hover: rgba(255, 255, 255, 0.18);
+  --heroui-border-focus: #006fee;
+
+  --heroui-radius-sm: 8px;
+  --heroui-radius-md: 12px;
+  --heroui-radius-lg: 16px;
+  --heroui-radius-xl: 22px;
+  --heroui-radius-full: 9999px;
+
+  /* Typography */
   --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Elevation */
+  --heroui-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --heroui-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --heroui-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --heroui-shadow-primary: 0 10px 28px -6px rgba(0, 111, 238, 0.45);
 }
 
 * {
@@ -25,37 +62,44 @@
   padding: 0;
 }
 
-body.shadcn-root {
-  background-color: var(--zinc-950) !important;
-  color: var(--zinc-50) !important;
+body.heroui-root {
+  background-color: var(--heroui-background) !important;
+  color: var(--heroui-foreground) !important;
   font-family: var(--font-sans) !important;
   min-height: 100vh;
   margin: 0;
   display: flex;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  position: relative;
 }
 
-/* Split-screen layout (Classic shadcn Authentication Example) */
-.shadcn-split-layout {
+/* ==========================================================================
+   HeroUI Split Layout
+   ========================================================================== */
+.heroui-split-layout {
   display: grid;
   grid-template-columns: 1fr;
   min-height: 100vh;
   width: 100vw;
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 1024px) {
-  .shadcn-split-layout {
-    grid-template-columns: 1fr 1fr;
+  .heroui-split-layout {
+    grid-template-columns: 1.15fr 1fr;
   }
 }
 
-/* Left Hero / Brand Panel */
-.shadcn-hero-panel {
+/* ==========================================================================
+   Left Hero Panel (HeroUI Vibrant Ambient Showcase)
+   ========================================================================== */
+.heroui-hero-panel {
   display: none;
-  background-color: #09090b;
-  border-right: 1px solid var(--zinc-800);
-  padding: 48px;
+  background: #09090d;
+  border-right: 1px solid var(--heroui-border);
+  padding: 56px 48px;
   position: relative;
   flex-direction: column;
   justify-content: space-between;
@@ -63,342 +107,581 @@ body.shadcn-root {
 }
 
 @media (min-width: 1024px) {
-  .shadcn-hero-panel {
+  .heroui-hero-panel {
     display: flex;
   }
 }
 
-.shadcn-hero-pattern {
+.heroui-hero-glow {
   position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.4;
+  inset: -100px;
+  background: var(--heroui-hero-glow);
+  filter: blur(60px);
+  opacity: 0.8;
   pointer-events: none;
+  z-index: 0;
 }
 
-.shadcn-brand-top {
+.heroui-hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heroui-brand-top {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   position: relative;
   z-index: 10;
 }
 
-.shadcn-logo-icon {
-  color: var(--zinc-50);
+.heroui-logo-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--heroui-radius-md);
+  background: var(--heroui-secondary-gradient);
+  box-shadow: var(--heroui-shadow-primary);
+  color: #ffffff;
 }
 
-.shadcn-brand-name {
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--zinc-50);
+.heroui-brand-text {
+  display: flex;
+  flex-direction: column;
 }
 
-.shadcn-hero-footer {
+.heroui-brand-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+}
+
+.heroui-brand-tagline {
+  font-size: 0.78rem;
+  color: var(--heroui-foreground-muted);
+  font-weight: 500;
+}
+
+.heroui-hero-body {
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
+  max-width: 520px;
 }
 
-.shadcn-quote-card {
-  max-width: 480px;
+.heroui-hero-heading {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  color: #ffffff;
 }
 
-.shadcn-quote-text {
-  font-size: 1.05rem;
+.heroui-gradient-text {
+  background: var(--heroui-secondary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.heroui-hero-desc {
+  font-size: 0.98rem;
   line-height: 1.6;
-  color: var(--zinc-200);
-  font-weight: 400;
-  margin-bottom: 12px;
+  color: var(--heroui-foreground-muted);
 }
 
-.shadcn-quote-author .author-name {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--zinc-100);
+.heroui-metric-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
 }
 
-.shadcn-quote-author .author-title {
-  font-size: 0.8rem;
-  color: var(--zinc-500);
-}
-
-.shadcn-compliance-badge {
+.heroui-metric-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--zinc-800);
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: var(--heroui-radius-full);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--heroui-border);
+  backdrop-filter: blur(12px);
+  font-size: 0.8rem;
+  color: var(--heroui-foreground);
+  font-weight: 500;
+}
+
+.heroui-hero-footer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.heroui-glass-card {
+  background: rgba(24, 24, 27, 0.65);
+  border: 1px solid var(--heroui-border);
+  backdrop-filter: blur(20px);
+  border-radius: var(--heroui-radius-lg);
+  padding: 20px 24px;
+  box-shadow: var(--heroui-shadow-md);
+}
+
+.heroui-quote-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--heroui-foreground);
+  margin-bottom: 12px;
+}
+
+.heroui-quote-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.author-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--heroui-radius-full);
+  background: var(--heroui-secondary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.author-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.author-title {
+  font-size: 0.78rem;
+  color: var(--heroui-foreground-muted);
+}
+
+.heroui-compliance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 111, 238, 0.08);
+  border: 1px solid rgba(0, 111, 238, 0.25);
+  padding: 6px 14px;
+  border-radius: var(--heroui-radius-full);
   font-size: 0.75rem;
-  color: var(--zinc-400);
+  color: #93c5fd;
   font-family: var(--font-mono);
   width: fit-content;
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
+.status-pulse-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--heroui-success);
+  box-shadow: 0 0 10px var(--heroui-success);
+  animation: pulseDot 2s infinite ease-in-out;
 }
 
-/* Right Auth Container */
-.shadcn-auth-panel {
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+/* ==========================================================================
+   Right Auth Container (HeroUI Glass Card Form)
+   ========================================================================== */
+.heroui-auth-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 24px;
-  background: var(--zinc-950);
+  padding: 40px 24px;
+  background: var(--heroui-background);
+  position: relative;
 }
 
-.shadcn-auth-container {
+.heroui-auth-container {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
 }
 
-.shadcn-auth-card {
+.heroui-auth-card {
+  background: var(--heroui-content1);
+  border: 1px solid var(--heroui-border);
+  border-radius: var(--heroui-radius-xl);
+  padding: 36px 32px;
+  box-shadow: var(--heroui-shadow-lg);
+  position: relative;
   display: flex;
   flex-direction: column;
 }
 
-.shadcn-card-header {
+.heroui-card-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
-.shadcn-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  color: var(--zinc-50);
+.heroui-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #ffffff;
 }
 
-.shadcn-subtitle {
-  font-size: 0.875rem;
-  color: var(--zinc-400);
-  line-height: 1.4;
+.heroui-subtitle {
+  font-size: 0.88rem;
+  color: var(--heroui-foreground-muted);
+  line-height: 1.45;
 }
 
-/* Alerts */
-.shadcn-alert {
+/* ==========================================================================
+   HeroUI Alerts & Badges
+   ========================================================================== */
+.heroui-alert {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 0.815rem;
-  margin-bottom: 16px;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--heroui-radius-md);
+  font-size: 0.84rem;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px);
 }
 
-.shadcn-alert-error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+.heroui-alert-error {
+  background: var(--heroui-danger-bg);
+  border: 1px solid rgba(243, 18, 96, 0.35);
+  color: #ff6b8b;
 }
 
-/* Form Fields */
-.shadcn-form {
+.heroui-alert-success {
+  background: var(--heroui-success-bg);
+  border: 1px solid rgba(23, 201, 100, 0.35);
+  color: #4ade80;
+}
+
+.heroui-alert-warning {
+  background: var(--heroui-warning-bg);
+  border: 1px solid rgba(245, 165, 36, 0.35);
+  color: #fbbf24;
+}
+
+/* ==========================================================================
+   HeroUI Form Inputs
+   ========================================================================== */
+.heroui-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
-.shadcn-field {
+.heroui-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.shadcn-label {
+.heroui-label {
   font-size: 0.84rem;
-  font-weight: 500;
-  color: var(--zinc-200);
+  font-weight: 600;
+  color: var(--heroui-foreground);
 }
 
-.shadcn-label-row {
+.heroui-label-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.shadcn-sublink {
+.heroui-sublink {
   font-size: 0.75rem;
-  color: var(--zinc-500);
-  font-family: var(--font-mono);
+  color: var(--heroui-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
 }
 
-.shadcn-input-wrapper {
+.heroui-sublink:hover {
+  text-decoration: underline;
+}
+
+.heroui-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.shadcn-input {
-  height: 38px !important;
+.heroui-input {
+  height: 44px !important;
   width: 100% !important;
-  border-radius: 6px !important;
-  border: 1px solid var(--zinc-800) !important;
-  background-color: rgba(24, 24, 27, 0.6) !important;
-  padding: 0 12px !important;
-  font-size: 0.875rem !important;
-  color: var(--zinc-50) !important;
+  border-radius: var(--heroui-radius-md) !important;
+  border: 1px solid var(--heroui-border) !important;
+  background-color: var(--heroui-content2) !important;
+  padding: 0 14px !important;
+  font-size: 0.9rem !important;
+  color: #ffffff !important;
   font-family: var(--font-sans) !important;
   outline: none !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.shadcn-input:focus {
-  border-color: var(--zinc-400) !important;
-  box-shadow: 0 0 0 1px var(--zinc-400) !important;
-  background-color: var(--zinc-900) !important;
+.heroui-input:hover {
+  border-color: var(--heroui-border-hover) !important;
+  background-color: #1f1f23 !important;
 }
 
-.shadcn-input::placeholder {
-  color: var(--zinc-600) !important;
+.heroui-input:focus {
+  border-color: var(--heroui-border-focus) !important;
+  background-color: #1a1a20 !important;
+  box-shadow: 0 0 0 3px rgba(0, 111, 238, 0.25) !important;
 }
 
-.shadcn-eye-btn {
+.heroui-input::placeholder {
+  color: var(--heroui-foreground-subtle) !important;
+}
+
+.heroui-eye-btn {
   position: absolute;
-  right: 10px;
+  right: 12px;
   background: transparent;
   border: none;
-  color: var(--zinc-500);
+  color: var(--heroui-foreground-subtle);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 6px;
+  border-radius: var(--heroui-radius-sm);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.shadcn-eye-btn:hover {
-  color: var(--zinc-300);
+.heroui-eye-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
-.shadcn-checkbox-row {
+.heroui-checkbox-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.815rem;
-  color: var(--zinc-400);
+  font-size: 0.84rem;
+  color: var(--heroui-foreground-muted);
 }
 
-.shadcn-checkbox-label {
+.heroui-checkbox-label {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  user-select: none;
 }
 
-/* Primary Button (shadcn style: Solid White with Black Text in Dark Mode) */
-.shadcn-btn-primary {
-  height: 38px !important;
+.heroui-checkbox {
+  accent-color: var(--heroui-primary);
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   HeroUI Buttons
+   ========================================================================== */
+.heroui-btn-primary {
+  height: 44px !important;
   width: 100% !important;
-  border-radius: 6px !important;
-  background-color: var(--zinc-50) !important;
-  color: var(--zinc-950) !important;
+  border-radius: var(--heroui-radius-md) !important;
+  background-color: var(--heroui-primary) !important;
+  color: #ffffff !important;
   border: none !important;
-  font-size: 0.875rem !important;
+  font-size: 0.92rem !important;
   font-weight: 600 !important;
   font-family: var(--font-sans) !important;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.shadcn-btn-primary:hover {
-  background-color: rgba(250, 250, 250, 0.9) !important;
-}
-
-/* Divider */
-.shadcn-divider {
-  display: flex;
+  box-shadow: var(--heroui-shadow-primary) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: inline-flex;
   align-items: center;
-  margin: 24px 0 18px 0;
-  gap: 12px;
-}
-
-.shadcn-divider-line {
-  flex: 1;
-  height: 1px;
-  background-color: var(--zinc-800);
-}
-
-.shadcn-divider-text {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--zinc-500);
-  font-weight: 600;
-}
-
-/* Personas Outline Grid */
-.shadcn-personas-grid {
-  display: flex;
-  flex-direction: column;
+  justify-content: center;
   gap: 8px;
 }
 
-.shadcn-persona-btn {
-  background: rgba(24, 24, 27, 0.4);
-  border: 1px solid var(--zinc-800);
-  border-radius: 6px;
-  padding: 10px 12px;
+.heroui-btn-primary:hover {
+  background-color: var(--heroui-primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px -4px rgba(0, 111, 238, 0.55) !important;
+}
+
+.heroui-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.heroui-btn-secondary {
+  height: 44px !important;
+  width: 100% !important;
+  border-radius: var(--heroui-radius-md) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--heroui-foreground) !important;
+  border: 1px solid var(--heroui-border) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: all 0.2s ease !important;
+}
+
+.heroui-btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--heroui-border-hover) !important;
+}
+
+/* ==========================================================================
+   HeroUI Divider
+   ========================================================================== */
+.heroui-divider {
+  display: flex;
+  align-items: center;
+  margin: 22px 0 16px 0;
+  gap: 12px;
+}
+
+.heroui-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--heroui-border);
+}
+
+.heroui-divider-text {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--heroui-foreground-subtle);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   HeroUI Personas Grid (Modern Interactive Cards)
+   ========================================================================== */
+.heroui-personas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.heroui-persona-card {
+  background: var(--heroui-content2);
+  border: 1px solid var(--heroui-border);
+  border-radius: var(--heroui-radius-md);
+  padding: 12px 14px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.shadcn-persona-btn:hover {
-  background: var(--zinc-900);
-  border-color: var(--zinc-700);
+.heroui-persona-card:hover {
+  background: var(--heroui-content3);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow: var(--heroui-shadow-sm);
 }
 
-.persona-btn-top {
+.heroui-persona-card:active {
+  transform: scale(0.98);
+}
+
+.persona-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2px;
 }
 
-.persona-name {
-  font-size: 0.825rem;
+.persona-title {
+  font-size: 0.88rem;
   font-weight: 600;
-  color: var(--zinc-200);
+  color: #ffffff;
 }
 
-.persona-desc {
-  font-size: 0.72rem;
-  color: var(--zinc-500);
-  font-family: var(--font-mono);
-}
-
-.shadcn-badge {
-  font-size: 0.65rem;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.badge-admin { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
-.badge-lead { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
-.badge-dev { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
-.badge-viewer { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25); }
-
-.shadcn-terms {
+.persona-meta {
   font-size: 0.75rem;
-  color: var(--zinc-500);
+  color: var(--heroui-foreground-muted);
+  font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+   HeroUI Role Chips
+   ========================================================================== */
+.heroui-chip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  border-radius: var(--heroui-radius-full);
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chip-admin {
+  background: var(--heroui-danger-bg);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.chip-lead {
+  background: var(--heroui-warning-bg);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.chip-dev {
+  background: var(--heroui-primary-50);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.chip-viewer {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.heroui-legal-text {
+  font-size: 0.75rem;
+  color: var(--heroui-foreground-subtle);
   text-align: center;
   margin-top: 24px;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+.heroui-legal-text a {
+  color: var(--heroui-foreground-muted);
+  text-decoration: underline;
+  transition: color 0.15s ease;
+}
+
+.heroui-legal-text a:hover {
+  color: #ffffff;
 }

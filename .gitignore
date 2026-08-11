@@ -26,3 +26,11 @@ backend/target/
 *.tmp
 nohup.out
 /tmp/
+
+# Python / AI consumer
+__pycache__/
+**/.pytest_cache/
+ai-consumer/.venv/
+
+# Jest
+frontend/test-results/

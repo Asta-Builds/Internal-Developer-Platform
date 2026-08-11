@@ -2135,47 +2135,80 @@
   </div>
 </div>
 
-<!-- ================= UN-AUTHENTICATED: SHADCN / UI SPLIT AUTHENTICATION GATEWAY ================= -->
-<div *ngIf="!isAuthenticated()" class="shadcn-split-layout">
-  <!-- Left Side: Hero Brand / Testimonial Panel -->
-  <div class="shadcn-hero-panel">
-    <div class="shadcn-hero-pattern"></div>
-    <div class="shadcn-brand-top">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shadcn-logo-icon">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-        <path d="M2 17l10 5 10-5"></path>
-        <path d="M2 12l10 5 10-5"></path>
-      </svg>
-      <span class="shadcn-brand-name">Nexus IDP Inc.</span>
+<!-- ================= UN-AUTHENTICATED: HERO UI SPLIT AUTHENTICATION GATEWAY ================= -->
+<div *ngIf="!isAuthenticated()" class="heroui-split-layout">
+  <!-- Left Side: HeroUI Ambient Showcase Panel -->
+  <div class="heroui-hero-panel">
+    <div class="heroui-hero-glow"></div>
+    <div class="heroui-hero-grid"></div>
+    
+    <div class="heroui-brand-top">
+      <div class="heroui-logo-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+      </div>
+      <div class="heroui-brand-text">
+        <span class="heroui-brand-name">Nexus IDP</span>
+        <span class="heroui-brand-tagline">Internal Developer Platform</span>
+      </div>
     </div>
 
-    <div class="shadcn-hero-footer">
-      <div class="shadcn-quote-card">
-        <p class="shadcn-quote-text">
-          &ldquo;This platform has completely transformed how our engineering teams scaffold, deploy, and monitor distributed microservices across multi-region Kubernetes clusters.&rdquo;
+    <div class="heroui-hero-body">
+      <h2 class="heroui-hero-heading">
+        Accelerate your <span class="heroui-gradient-text">Cloud Native</span> Golden Paths.
+      </h2>
+      <p class="heroui-hero-desc">
+        Self-service microservices catalog, automated project scaffolding, instant canary rollouts, and real-time observability telemetry.
+      </p>
+      <div class="heroui-metric-chips">
+        <div class="heroui-metric-chip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#006fee" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>&lt; 5ms Flag Eval</span>
+        </div>
+        <div class="heroui-metric-chip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17c964" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>OIDC S256 PKCE</span>
+        </div>
+        <div class="heroui-metric-chip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7828c8" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          <span>pgvector RAG</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="heroui-hero-footer">
+      <div class="heroui-glass-card">
+        <p class="heroui-quote-text">
+          &ldquo;This platform transforms how engineering teams scaffold, deploy, and monitor distributed microservices across multi-region Kubernetes clusters.&rdquo;
         </p>
-        <div class="shadcn-quote-author">
-          <div class="author-name">Sofia Davis</div>
-          <div class="author-title">VP of Platform Engineering</div>
+        <div class="heroui-quote-author">
+          <div class="author-avatar">SD</div>
+          <div>
+            <div class="author-name">Sofia Davis</div>
+            <div class="author-title">VP of Platform Engineering</div>
+          </div>
         </div>
       </div>
 
-      <div class="shadcn-compliance-badge">
-        <span class="status-dot"></span>
+      <div class="heroui-compliance-badge">
+        <span class="status-pulse-dot"></span>
         <span>Keycloak 24 IAM &bull; Realm: <strong>idp-realm</strong> &bull; PKCE S256</span>
       </div>
     </div>
   </div>
 
   <!-- Right Side: Authentication Card -->
-  <div class="shadcn-auth-panel">
-    <div class="shadcn-auth-container">
-      <div class="shadcn-card-header">
-        <h1 class="shadcn-title">Welcome back</h1>
-        <p class="shadcn-subtitle">Enter your credentials below to access the Internal Developer Platform</p>
+  <div class="heroui-auth-panel">
+    <div class="heroui-auth-container">
+      <div class="heroui-card-header">
+        <h1 class="heroui-title">Welcome back</h1>
+        <p class="heroui-subtitle">Enter your credentials below to access the Internal Developer Platform</p>
       </div>
 
-      <div *ngIf="keycloakService.loginErrorSignal()" class="shadcn-alert shadcn-alert-error">
+      <div *ngIf="keycloakService.loginErrorSignal()" class="heroui-alert heroui-alert-error">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -2184,37 +2217,37 @@
         <span>{{ keycloakService.loginErrorSignal() }}</span>
       </div>
 
-      <!-- Official Keycloak OAuth2 Redirect Button (shadcn Primary) -->
-      <button type="button" (click)="redirectToKeycloak()" class="shadcn-btn-primary" style="margin-bottom:18px; display:flex; align-items:center; justify-content:center; gap:8px;">
+      <!-- Official Keycloak OAuth2 Redirect Button (HeroUI Primary) -->
+      <button type="button" (click)="redirectToKeycloak()" class="heroui-btn-primary" style="margin-bottom:16px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
           <polyline points="10 17 15 12 10 7"></polyline>
           <line x1="15" y1="12" x2="3" y2="12"></line>
         </svg>
-        Sign In with Keycloak SSO
+        <span>Sign In with Keycloak SSO</span>
       </button>
 
-      <!-- shadcn Divider -->
-      <div class="shadcn-divider" style="margin: 12px 0 16px 0;">
-        <span class="shadcn-divider-line"></span>
-        <span class="shadcn-divider-text">Or continue with credentials</span>
-        <span class="shadcn-divider-line"></span>
+      <!-- HeroUI Divider -->
+      <div class="heroui-divider">
+        <span class="heroui-divider-line"></span>
+        <span class="heroui-divider-text">Or continue with credentials</span>
+        <span class="heroui-divider-line"></span>
       </div>
 
-      <form (ngSubmit)="performKeycloakLogin()" class="shadcn-form">
-        <div class="shadcn-field">
-          <label class="shadcn-label">Email or Username</label>
-          <input type="text" [(ngModel)]="loginForm.username" name="gate_username" class="shadcn-input" placeholder="name@example.com or admin" required />
+      <form (ngSubmit)="performKeycloakLogin()" class="heroui-form">
+        <div class="heroui-field">
+          <label class="heroui-label">Email or Username</label>
+          <input type="text" [(ngModel)]="loginForm.username" name="gate_username" class="heroui-input" placeholder="name@example.com or admin" required />
         </div>
 
-        <div class="shadcn-field">
-          <div class="shadcn-label-row">
-            <label class="shadcn-label">Password</label>
-            <span class="shadcn-sublink">Keycloak 24</span>
+        <div class="heroui-field">
+          <div class="heroui-label-row">
+            <label class="heroui-label">Password</label>
+            <span class="heroui-sublink" style="color:var(--heroui-foreground-subtle); font-family:var(--font-code);">Keycloak 24</span>
           </div>
-          <div class="shadcn-input-wrapper">
-            <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="loginForm.password" name="gate_password" class="shadcn-input" placeholder="••••••••••••" required />
-            <button type="button" (click)="toggleShowPassword()" class="shadcn-eye-btn">
+          <div class="heroui-input-wrapper">
+            <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="loginForm.password" name="gate_password" class="heroui-input" placeholder="••••••••••••" required />
+            <button type="button" (click)="toggleShowPassword()" class="heroui-eye-btn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" *ngIf="!showPassword()">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -2227,33 +2260,32 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn-outline" style="width:100%; border-color:var(--zinc-800); background:rgba(255,255,255,0.04); color:var(--zinc-200); font-weight:600; padding:9px;">
+        <button type="submit" class="heroui-btn-secondary" style="margin-top: 4px;">
           Direct Sign In
         </button>
       </form>
 
-      <!-- shadcn Divider for Personas -->
-      <div class="shadcn-divider" style="margin: 18px 0 14px 0;">
-        <span class="shadcn-divider-line"></span>
-        <span class="shadcn-divider-text">Or test with persona</span>
-        <span class="shadcn-divider-line"></span>
+      <!-- HeroUI Divider for Personas -->
+      <div class="heroui-divider" style="margin: 20px 0 14px 0;">
+        <span class="heroui-divider-line"></span>
+        <span class="heroui-divider-text">Or test with persona</span>
+        <span class="heroui-divider-line"></span>
       </div>
 
       <!-- Personas Grid -->
-      <div class="shadcn-personas-grid">
-        <button *ngFor="let persona of keycloakPersonas" type="button" (click)="selectPersona(persona)" class="shadcn-persona-btn">
-          <div class="persona-btn-top">
-            <span class="persona-name">{{ persona.name }}</span>
-            <span class="shadcn-badge" [ngClass]="'badge-' + persona.username.replace('_', '')">{{ persona.role }}</span>
+      <div class="heroui-personas-grid">
+        <button *ngFor="let persona of keycloakPersonas" type="button" (click)="selectPersona(persona)" class="heroui-persona-card">
+          <div class="persona-card-header">
+            <span class="persona-title">{{ persona.name }}</span>
+            <span class="heroui-chip" [ngClass]="'chip-' + persona.username.replace('_', '')">{{ persona.role }}</span>
           </div>
-          <div class="persona-desc">{{ persona.username }} &bull; {{ persona.description }}</div>
+          <div class="persona-meta">{{ persona.username }} &bull; {{ persona.description }}</div>
         </button>
       </div>
 
-      <p class="shadcn-terms">
-        By continuing, you agree to our 
-        <a href="#" style="color:var(--zinc-300); text-decoration:underline;">Terms of Service</a> and 
-        <a href="#" style="color:var(--zinc-300); text-decoration:underline;">Privacy Policy</a>.
+      <p class="heroui-legal-text">
+        Protected by Keycloak IAM PKCE OAuth2.0 &bull;
+        <a href="#">Terms &amp; Policies</a>
       </p>
     </div>
   </div>

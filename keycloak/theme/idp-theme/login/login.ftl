@@ -1,28 +1,32 @@
 <#import "template.ftl" as layout>
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
     <#if section = "form">
-        <div class="shadcn-auth-card">
-            <div class="shadcn-card-header">
-                <h1 class="shadcn-title">Welcome back</h1>
-                <p class="shadcn-subtitle">Enter your corporate credentials below to access the Internal Developer Platform</p>
+        <div class="heroui-auth-card">
+            <div class="heroui-card-header">
+                <h1 class="heroui-title">Welcome back</h1>
+                <p class="heroui-subtitle">Enter your credentials below to access the Internal Developer Platform</p>
             </div>
 
             <#if realm.password>
-                <form id="kc-form-login" class="shadcn-form" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
-                    <div class="shadcn-field">
-                        <label for="username" class="shadcn-label">Email or Username</label>
-                        <input tabindex="1" id="username" class="shadcn-input" name="username" value="${(login.username!'')}" type="text" autofocus autocomplete="username" placeholder="name@example.com or admin" required />
+                <form id="kc-form-login" class="heroui-form" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
+                    <div class="heroui-field">
+                        <label for="username" class="heroui-label">Email or Username</label>
+                        <input tabindex="1" id="username" class="heroui-input" name="username" value="${(login.username!'')}" type="text" autofocus autocomplete="username" placeholder="name@example.com or admin" required />
                     </div>
 
-                    <div class="shadcn-field">
-                        <div class="shadcn-label-row">
-                            <label for="password" class="shadcn-label">Password</label>
-                            <span class="shadcn-sublink">Keycloak IAM 24</span>
+                    <div class="heroui-field">
+                        <div class="heroui-label-row">
+                            <label for="password" class="heroui-label">Password</label>
+                            <#if realm.resetPasswordAllowed>
+                                <a tabindex="5" href="${url.loginResetCredentialsUrl}" class="heroui-sublink">Forgot password?</a>
+                            <#else>
+                                <span class="heroui-sublink" style="color:var(--heroui-foreground-subtle);">Keycloak 24</span>
+                            </#if>
                         </div>
-                        <div class="shadcn-input-wrapper">
-                            <input tabindex="2" id="password" class="shadcn-input" name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" required />
-                            <button type="button" class="shadcn-eye-btn" onclick="togglePasswordVisibility()" title="Toggle password visibility">
-                                <svg id="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <div class="heroui-input-wrapper">
+                            <input tabindex="2" id="password" class="heroui-input" name="password" type="password" autocomplete="current-password" placeholder="••••••••••••" required />
+                            <button type="button" class="heroui-eye-btn" onclick="togglePasswordVisibility()" title="Toggle password visibility">
+                                <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
                                 </svg>
@@ -30,70 +34,73 @@
                         </div>
                     </div>
 
-                    <div class="shadcn-checkbox-row">
+                    <div class="heroui-checkbox-row">
                         <#if realm.rememberMe && !usernameHidden??>
-                            <label class="shadcn-checkbox-label">
-                                <input tabindex="3" id="rememberMe" name="rememberMe" type="checkbox" <#if login.rememberMe??>checked</#if>>
+                            <label class="heroui-checkbox-label">
+                                <input tabindex="3" id="rememberMe" name="rememberMe" class="heroui-checkbox" type="checkbox" <#if login.rememberMe??>checked</#if>>
                                 <span>Remember me</span>
                             </label>
                         </#if>
                     </div>
 
-                    <div class="shadcn-action-row">
+                    <div class="heroui-action-row">
                         <input type="hidden" id="id-hidden-input" name="credentialId" <#if auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>/>
-                        <button tabindex="4" class="shadcn-btn-primary" name="login" id="kc-login" type="submit">
-                            Sign In with Keycloak
+                        <button tabindex="4" class="heroui-btn-primary" name="login" id="kc-login" type="submit">
+                            <span>Sign In with Keycloak</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
                         </button>
                     </div>
                 </form>
             </#if>
 
-            <!-- shadcn Divider -->
-            <div class="shadcn-divider">
-                <span class="shadcn-divider-line"></span>
-                <span class="shadcn-divider-text">Or continue with persona</span>
-                <span class="shadcn-divider-line"></span>
+            <!-- HeroUI Divider -->
+            <div class="heroui-divider">
+                <span class="heroui-divider-line"></span>
+                <span class="heroui-divider-text">Or test with persona</span>
+                <span class="heroui-divider-line"></span>
             </div>
 
-            <!-- Personas Cards (shadcn Outline Buttons Style) -->
-            <div class="shadcn-personas-grid">
-                <button type="button" class="shadcn-persona-btn" onclick="fillPersona('admin', 'adminpassword')">
-                    <div class="persona-btn-top">
-                        <span class="persona-name">Platform Admin</span>
-                        <span class="shadcn-badge badge-admin">ADMIN</span>
+            <!-- Personas Cards (HeroUI Interactive Cards) -->
+            <div class="heroui-personas-grid">
+                <button type="button" class="heroui-persona-card" onclick="fillPersona('admin', 'adminpassword')">
+                    <div class="persona-card-header">
+                        <span class="persona-title">Platform Admin</span>
+                        <span class="heroui-chip chip-admin">ADMIN</span>
                     </div>
-                    <div class="persona-desc">admin / adminpassword &bull; Full Control</div>
+                    <div class="persona-meta">admin / adminpassword &bull; Full Access</div>
                 </button>
 
-                <button type="button" class="shadcn-persona-btn" onclick="fillPersona('tech_lead', 'leadpassword')">
-                    <div class="persona-btn-top">
-                        <span class="persona-name">Tech Lead</span>
-                        <span class="shadcn-badge badge-lead">TECH_LEAD</span>
+                <button type="button" class="heroui-persona-card" onclick="fillPersona('tech_lead', 'leadpassword')">
+                    <div class="persona-card-header">
+                        <span class="persona-title">Tech Lead</span>
+                        <span class="heroui-chip chip-lead">TECH_LEAD</span>
                     </div>
-                    <div class="persona-desc">tech_lead / leadpassword &bull; Canaries &amp; Flags</div>
+                    <div class="persona-meta">tech_lead / leadpassword &bull; Canaries &amp; Flags</div>
                 </button>
 
-                <button type="button" class="shadcn-persona-btn" onclick="fillPersona('developer', 'devpassword')">
-                    <div class="persona-btn-top">
-                        <span class="persona-name">Developer</span>
-                        <span class="shadcn-badge badge-dev">DEVELOPER</span>
+                <button type="button" class="heroui-persona-card" onclick="fillPersona('developer', 'devpassword')">
+                    <div class="persona-card-header">
+                        <span class="persona-title">Developer</span>
+                        <span class="heroui-chip chip-dev">DEVELOPER</span>
                     </div>
-                    <div class="persona-desc">developer / devpassword &bull; Microservices</div>
+                    <div class="persona-meta">developer / devpassword &bull; Scaffolding</div>
                 </button>
 
-                <button type="button" class="shadcn-persona-btn" onclick="fillPersona('viewer', 'viewerpassword')">
-                    <div class="persona-btn-top">
-                        <span class="persona-name">Viewer</span>
-                        <span class="shadcn-badge badge-viewer">VIEWER</span>
+                <button type="button" class="heroui-persona-card" onclick="fillPersona('viewer', 'viewerpassword')">
+                    <div class="persona-card-header">
+                        <span class="persona-title">Viewer</span>
+                        <span class="heroui-chip chip-viewer">VIEWER</span>
                     </div>
-                    <div class="persona-desc">viewer / viewerpassword &bull; Read-Only</div>
+                    <div class="persona-meta">viewer / viewerpassword &bull; Read-Only</div>
                 </button>
             </div>
 
-            <p class="shadcn-terms">
-                By clicking continue, you agree to our 
-                <a href="#" style="color:var(--zinc-300); text-decoration:underline;">Terms of Service</a> and 
-                <a href="#" style="color:var(--zinc-300); text-decoration:underline;">Privacy Policy</a>.
+            <p class="heroui-legal-text">
+                Protected by Keycloak IAM PKCE OAuth2.0 &bull;
+                <a href="#">Security Policies</a>
             </p>
         </div>
 

@@ -82,3 +82,35 @@ jobs:
       - name: Build (compiles templates)
         run: npm run build
         working-directory: frontend
+
+      - name: Unit tests (Jest)
+        run: npm test
+        working-directory: frontend
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-reports
+          path: frontend/test-results/
+          retention-days: 7
+
+  ai-consumer:
+    name: AI consumer (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+        working-directory: ai-consumer
+
+      - name: Unit tests (pytest)
+        run: pytest
+        working-directory: ai-consumer
