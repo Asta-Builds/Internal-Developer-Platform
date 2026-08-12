@@ -9,6 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * RabbitMQ broker configuration with Dead-Letter Exchanges (DLX),
+ * Dead-Letter Queues (DLQ), and automated routing for failed messages.
+ */
 @Configuration
 public class RabbitMQConfig {
 
@@ -33,24 +37,51 @@ public class RabbitMQConfig {
     @Value("${idp.queues.routing-key:fraud.analysis.routing.key}")
     private String routingKey;
 
+    @Value("${idp.queues.deadletter-exchange:idp.deadletter.exchange}")
+    private String deadLetterExchange;
+
+    @Value("${idp.queues.deadletter-queue:idp.deadletter.queue}")
+    private String deadLetterQueue;
+
+    @Value("${idp.queues.fraud-analysis-dlq:fraud.analysis.dlq}")
+    private String fraudAnalysisDlq;
+
+    // --- Main Exchanges & Dead-Letter Exchanges ---
+
     @Bean
     public DirectExchange idpExchange() {
         return new DirectExchange(exchange, true, false);
     }
 
     @Bean
+    public DirectExchange idpDeadLetterExchange() {
+        return new DirectExchange(deadLetterExchange, true, false);
+    }
+
+    // --- Active Queues with Dead-Letter Arguments ---
+
+    @Bean
     public Queue fraudAnalysisQueue() {
-        return QueueBuilder.durable(fraudAnalysisQueue).build();
+        return QueueBuilder.durable(fraudAnalysisQueue)
+                .withArgument("x-dead-letter-exchange", deadLetterExchange)
+                .withArgument("x-dead-letter-routing-key", "fraud.analysis.dlq.key")
+                .build();
     }
 
     @Bean
     public Queue fraudResultQueue() {
-        return QueueBuilder.durable(fraudResultQueue).build();
+        return QueueBuilder.durable(fraudResultQueue)
+                .withArgument("x-dead-letter-exchange", deadLetterExchange)
+                .withArgument("x-dead-letter-routing-key", "fraud.result.dlq.key")
+                .build();
     }
 
     @Bean
     public Queue auditStreamQueue() {
-        return QueueBuilder.durable(auditStreamQueue).build();
+        return QueueBuilder.durable(auditStreamQueue)
+                .withArgument("x-dead-letter-exchange", deadLetterExchange)
+                .withArgument("x-dead-letter-routing-key", "audit.dlq.key")
+                .build();
     }
 
     @Bean
@@ -62,6 +93,20 @@ public class RabbitMQConfig {
     public Queue scaffoldJobQueue() {
         return QueueBuilder.durable(scaffoldJobQueue).build();
     }
+
+    // --- Dead-Letter Queues (DLQ) ---
+
+    @Bean
+    public Queue fraudAnalysisDlq() {
+        return QueueBuilder.durable(fraudAnalysisDlq).build();
+    }
+
+    @Bean
+    public Queue idpGeneralDlq() {
+        return QueueBuilder.durable(deadLetterQueue).build();
+    }
+
+    // --- Main Queue Bindings ---
 
     @Bean
     public Binding fraudAnalysisBinding() {
@@ -87,6 +132,20 @@ public class RabbitMQConfig {
     public Binding scaffoldJobBinding() {
         return BindingBuilder.bind(scaffoldJobQueue()).to(idpExchange()).with("job.scaffold.routing.key");
     }
+
+    // --- DLQ Bindings ---
+
+    @Bean
+    public Binding fraudAnalysisDlqBinding() {
+        return BindingBuilder.bind(fraudAnalysisDlq()).to(idpDeadLetterExchange()).with("fraud.analysis.dlq.key");
+    }
+
+    @Bean
+    public Binding idpGeneralDlqBinding() {
+        return BindingBuilder.bind(idpGeneralDlq()).to(idpDeadLetterExchange()).with("dead.letter.routing.key");
+    }
+
+    // --- Converter & Template ---
 
     @Bean
     public MessageConverter jsonMessageConverter() {

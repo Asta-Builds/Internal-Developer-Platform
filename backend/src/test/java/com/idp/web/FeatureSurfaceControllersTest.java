@@ -3,24 +3,24 @@ package com.idp.web;
 import com.idp.dto.CopilotChatRequestDto;
 import com.idp.dto.CopilotChatResponseDto;
 import com.idp.dto.ServiceHealthDto;
-import com.idp.service.CopilotService;
-import com.idp.service.ObservabilityService;
+import com.idp.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Copilot, observability, devops and enterprise status endpoints.
+ * Copilot, observability, devops, DLQ and enterprise status endpoints.
  */
 @ExtendWith(MockitoExtension.class)
 class FeatureSurfaceControllersTest {
@@ -32,13 +32,19 @@ class FeatureSurfaceControllersTest {
     private ObservabilityController observabilityController;
     private DevOpsController devOpsController;
     private EnterpriseController enterpriseController;
+    private EventReplayService eventReplayService;
 
     @BeforeEach
     void setUp() {
         copilotController = new CopilotController(copilotService);
         observabilityController = new ObservabilityController(observabilityService);
-        devOpsController = new DevOpsController(new com.idp.service.DevOpsOperationsService());
-        enterpriseController = new EnterpriseController(new com.idp.service.ResiliencePolicyService());
+        devOpsController = new DevOpsController(new DevOpsOperationsService());
+
+        IdempotencyService idempotencyService = new IdempotencyService();
+        AuditService auditService = mock(AuditService.class);
+        eventReplayService = new EventReplayService(idempotencyService, auditService);
+
+        enterpriseController = new EnterpriseController(new ResiliencePolicyService(), eventReplayService);
     }
 
     @Test
@@ -96,10 +102,48 @@ class FeatureSurfaceControllersTest {
     }
 
     @Test
-    @DisplayName("enterprise status surfaces are served")
+    @DisplayName("enterprise status and DLQ surfaces are served")
     void enterpriseSurfaces() {
         assertThat(enterpriseController.getResilience().getBody().get("k8sCircuitBreaker")).isEqualTo("CLOSED");
         assertThat(enterpriseController.getStatusPage().getBody().get("platformStatus"))
                 .isEqualTo("ALL_SYSTEMS_OPERATIONAL");
+
+        Map<String, Object> dlq = enterpriseController.getDlqStatus().getBody();
+        assertThat(dlq.get("deadLetterExchange")).isEqualTo("idp.deadletter.exchange");
+        assertThat(dlq.get("deadLetterQueue")).isEqualTo("fraud.analysis.dlq");
+    }
+
+    @Test
+    @DisplayName("event replay executes and deduplicates duplicate invocations")
+    void eventReplayAndDeduplication() {
+        Map<String, Object> payload = Map.of(
+                "eventId", "evt-123",
+                "idempotencyKey", "idem-key-abc",
+                "dryRun", false,
+                "payload", Map.of("action", "retry_payment", "amount", 500)
+        );
+
+        ResponseEntity<Map<String, Object>> firstRun = enterpriseController.replayEvent(payload);
+        assertThat(firstRun.getBody().get("status")).isEqualTo("REPLAYED_SUCCESS");
+        assertThat(firstRun.getBody().get("duplicate")).isEqualTo(false);
+
+        // Second invocation with same idempotencyKey -> must deduplicate without re-executing
+        ResponseEntity<Map<String, Object>> secondRun = enterpriseController.replayEvent(payload);
+        assertThat(secondRun.getBody().get("status")).isEqualTo("DEDUPLICATED_SKIPPED");
+        assertThat(secondRun.getBody().get("duplicate")).isEqualTo(true);
+    }
+
+    @Test
+    @DisplayName("dry-run simulation executes without recording duplicate idempotency lock")
+    void dryRunSimulation() {
+        Map<String, Object> payload = Map.of(
+                "eventId", "evt-dry-456",
+                "idempotencyKey", "idem-dry-key",
+                "payload", Map.of("action", "test_routing")
+        );
+
+        ResponseEntity<Map<String, Object>> sim = enterpriseController.dryRunSimulation(payload);
+        assertThat(sim.getBody().get("status")).isEqualTo("SIMULATED_SUCCESS");
+        assertThat(sim.getBody().get("dryRun")).isEqualTo(true);
     }
 }

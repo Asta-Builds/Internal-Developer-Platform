@@ -47,6 +47,13 @@ spring:
         max-concurrency: 10
         prefetch: 50
         acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000ms
+          multiplier: 2.0
+          max-attempts: 3
+          max-interval: 10000ms
 
   # Spring Cache Configuration
   cache:
@@ -85,6 +92,9 @@ idp:
     audit-stream: audit.event.queue
     exchange: idp.direct.exchange
     routing-key: fraud.analysis.routing.key
+    deadletter-exchange: idp.deadletter.exchange
+    deadletter-queue: idp.deadletter.queue
+    fraud-analysis-dlq: fraud.analysis.dlq
 
   scaffold:
     artifact-dir: ${IDP_SCAFFOLD_ARTIFACT_DIR:./scaffold-artifacts}
