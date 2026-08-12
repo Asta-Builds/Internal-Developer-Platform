@@ -12,7 +12,11 @@ export interface ApiEndpoint {
 
 export interface Dependency {
   id?: string;
-  targetServiceId: string;
+  targetServiceId?: string;
+  /** Display name for deps on non-service resources: external APIs, databases, queues. */
+  targetExternal?: string;
+  /** DOWNSTREAM = this service calls/consumes the target; UPSTREAM = this service feeds the target. */
+  direction?: string;
   type: string;
 }
 
@@ -22,6 +26,10 @@ export interface ServiceItem {
   description: string;
   repositoryUrl: string;
   ownerTeam: string;
+  /** Slack channel / on-call rotor for the owning team. */
+  contactChannel?: string;
+  /** Technical documentation link (techdocs / runbook / ADRs). */
+  docsUrl?: string;
   status: 'ACTIVE' | 'SCALING' | 'RESTARTING' | 'DEGRADED' | 'MAINTENANCE';
   techStack: 'SPRING_BOOT' | 'ANGULAR' | 'GO' | 'PYTHON';
   exposedApis: ApiEndpoint[];
@@ -151,6 +159,8 @@ export class CatalogService {
       description: 'Handles credit card processing, refunds, fraud scoring, and multi-currency transaction settlement',
       repositoryUrl: 'https://github.com/org/payment-service',
       ownerTeam: 'Equipe Paiement',
+      contactChannel: '#pay-core',
+      docsUrl: 'https://techdocs.company.internal/payment-gateway',
       status: 'ACTIVE',
       techStack: 'SPRING_BOOT',
       replicas: 4,
@@ -166,8 +176,10 @@ export class CatalogService {
         { path: '/api/v1/payments/verify-3ds', method: 'POST', description: 'Authenticate 3D-Secure 2.0 biometric challenge' }
       ],
       dependencies: [
-        { targetServiceId: 'srv-notification', type: 'REST' },
-        { targetServiceId: 'srv-user', type: 'GRPC' }
+        { targetServiceId: 'srv-notification', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetExternal: 'Stripe Payments API (external)', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetExternal: 'PostgreSQL payments_db', type: 'DB', direction: 'DOWNSTREAM' },
+        { targetExternal: 'Kafka topic payment-events', type: 'KAFKA', direction: 'DOWNSTREAM' }
       ]
     },
     {
@@ -176,6 +188,8 @@ export class CatalogService {
       description: 'Product taxonomy, dynamic pricing, inventory check and OpenSearch search indexing engine',
       repositoryUrl: 'https://github.com/org/catalog-service',
       ownerTeam: 'Equipe Catalogue',
+      contactChannel: '#catalog-core',
+      docsUrl: 'https://techdocs.company.internal/product-catalog',
       status: 'ACTIVE',
       techStack: 'GO',
       replicas: 3,
@@ -190,7 +204,11 @@ export class CatalogService {
         { path: '/api/v1/products/{id}', method: 'GET', description: 'Retrieve detailed product metadata' },
         { path: '/api/v1/products/pricing/live', method: 'GET', description: 'Fetch algorithmic dynamic pricing' }
       ],
-      dependencies: []
+      dependencies: [
+        { targetServiceId: 'srv-payment', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetExternal: 'Elasticsearch catalog-index', type: 'DB', direction: 'DOWNSTREAM' },
+        { targetExternal: 'Kafka topic catalog-events', type: 'KAFKA', direction: 'DOWNSTREAM' }
+      ]
     },
     {
       id: 'srv-notification',
@@ -198,6 +216,8 @@ export class CatalogService {
       description: 'Real-time transactional email, SMS, push alerts, and WhatsApp Cloud API message delivery',
       repositoryUrl: 'https://github.com/org/notification-service',
       ownerTeam: 'Equipe Notifications',
+      contactChannel: '#notifications-core',
+      docsUrl: 'https://techdocs.company.internal/notification-dispatcher',
       status: 'ACTIVE',
       techStack: 'PYTHON',
       replicas: 3,
@@ -212,7 +232,11 @@ export class CatalogService {
         { path: '/api/v1/notify/sms', method: 'POST', description: 'Trigger urgent OTP SMS alert' },
         { path: '/api/v1/notify/whatsapp', method: 'POST', description: 'Dispatch templated WhatsApp HSM alert' }
       ],
-      dependencies: []
+      dependencies: [
+        { targetExternal: 'Twilio SMS API (external)', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetExternal: 'SendGrid Email API (external)', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetExternal: 'Kafka topic notification-events', type: 'KAFKA', direction: 'DOWNSTREAM' }
+      ]
     },
     {
       id: 'srv-frontend-portal',
@@ -220,6 +244,8 @@ export class CatalogService {
       description: 'Unified self-service developer web console built with standalone Angular components & HeroUI',
       repositoryUrl: 'https://github.com/org/developer-portal',
       ownerTeam: 'Equipe Platform',
+      contactChannel: '#platform-infra',
+      docsUrl: 'https://techdocs.company.internal/developer-portal',
       status: 'ACTIVE',
       techStack: 'ANGULAR',
       replicas: 2,
@@ -234,8 +260,8 @@ export class CatalogService {
         { path: '/scaffolder', method: 'GET', description: 'Golden path project bootstrap engine' }
       ],
       dependencies: [
-        { targetServiceId: 'srv-payment', type: 'REST' },
-        { targetServiceId: 'srv-catalog', type: 'REST' }
+        { targetServiceId: 'srv-payment', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetServiceId: 'srv-catalog', type: 'REST', direction: 'DOWNSTREAM' }
       ]
     },
     {
@@ -244,6 +270,8 @@ export class CatalogService {
       description: 'FastAPI AI Consumer processing high-throughput RabbitMQ transactions & anomaly detection',
       repositoryUrl: 'https://github.com/org/fraud-ai-consumer',
       ownerTeam: 'Equipe Securite',
+      contactChannel: '#fraud-ai',
+      docsUrl: 'https://techdocs.company.internal/fraud-ai-consumer',
       status: 'ACTIVE',
       techStack: 'PYTHON',
       replicas: 4,
@@ -258,7 +286,8 @@ export class CatalogService {
         { path: '/api/v1/fraud/model/reload', method: 'POST', description: 'Hot-swap ONNX inference weights' }
       ],
       dependencies: [
-        { targetServiceId: 'srv-payment', type: 'REST' }
+        { targetServiceId: 'srv-payment', type: 'REST', direction: 'DOWNSTREAM' },
+        { targetExternal: 'RabbitMQ fraud.analysis.queue', type: 'KAFKA', direction: 'DOWNSTREAM' }
       ]
     }
   ];

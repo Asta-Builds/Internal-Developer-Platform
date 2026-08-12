@@ -52,6 +52,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                 // Liveness probe and CORS preflight must stay reachable.
                 auth.requestMatchers("/api/health", "/actuator/health/**").permitAll();
+                // OpenAPI 3.0 contract + Swagger UI (read-only documentation).
+                auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
                 auth.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll();
 
                 if (h2ConsoleEnabled) {

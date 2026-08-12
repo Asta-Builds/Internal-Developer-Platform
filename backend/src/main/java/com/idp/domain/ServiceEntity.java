@@ -23,6 +23,13 @@ public class ServiceEntity {
     private String description;
     private String repositoryUrl;
     private String ownerTeam;
+
+    /** Slack channel / group, e-mail alias or on-call rotor for the owning team. */
+    private String contactChannel;
+
+    /** Link to the service's technical documentation (runbook, ADRs, API guide). */
+    private String docsUrl;
+
     private String status; // ACTIVE, DEPRECATED, SCAFFOLDING
     private String techStack; // SPRING_BOOT, ANGULAR, PYTHON, GO
 

@@ -77,6 +77,14 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
+        <!-- API Contract: OpenAPI 3.0 docs + Swagger UI, generated from the live
+             controllers so the spec can never drift from the code. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+
         <!-- Dev tools & Utilities -->
         <dependency>
             <groupId>org.projectlombok</groupId>

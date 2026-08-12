@@ -44,7 +44,7 @@ class FlywayMigrationTest {
     }
 
     @Test
-    @DisplayName("applies every migration cleanly, including V5")
+    @DisplayName("applies every migration cleanly, including V6")
     void appliesAllMigrations() {
         MigrateResult result = Flyway.configure()
                 .dataSource(h2DataSource("migrate_all"))
@@ -56,7 +56,78 @@ class FlywayMigrationTest {
 
         assertThat(result.success).isTrue();
         assertThat(result.migrations).extracting(m -> m.version)
-                .contains("1", "2", "3", "4", "5");
+                .contains("1", "2", "3", "4", "5", "6");
+    }
+
+    @Test
+    @DisplayName("every service carries ownership, contact and documentation metadata")
+    void servicesCarryOwnershipMetadata() throws Exception {
+        Flyway flyway = migrate("catalog_ownership");
+
+        try (Connection connection = flyway.getConfiguration().getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+
+            assertThat(count(statement, "SELECT COUNT(*) FROM services")).isEqualTo(10);
+
+            // No service may be registered without an owning team, a contact
+            // channel and a technical documentation link.
+            assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE owner_team IS NULL")).isZero();
+            assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE contact_channel IS NULL")).isZero();
+            assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE docs_url IS NULL")).isZero();
+        }
+    }
+
+    @Test
+    @DisplayName("dependency map covers services, external APIs, databases and queues")
+    void dependencyMapCoversAllResourceKinds() throws Exception {
+        Flyway flyway = migrate("catalog_dependencies");
+
+        try (Connection connection = flyway.getConfiguration().getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+
+            // External integrations (Stripe, Twilio, SendGrid, GitHub) are now
+            // first-class dependency rows instead of free-text descriptions.
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM dependencies WHERE target_external IS NOT NULL"))
+                    .isPositive();
+
+            for (String type : new String[] { "REST", "DB", "KAFKA" }) {
+                assertThat(count(statement,
+                        "SELECT COUNT(*) FROM dependencies WHERE type = '" + type + "'"))
+                        .as("dependencies of type %s", type)
+                        .isPositive();
+            }
+
+            // Every dependency declares a direction with the documented default.
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM dependencies WHERE direction NOT IN ('DOWNSTREAM','UPSTREAM')"))
+                    .isZero();
+
+            // No dangling pointer: a dependency is either a registered service
+            // or an explicitly named external resource, never both.
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM dependencies WHERE (target_service_id IS NULL) = (target_external IS NULL)"))
+                    .isZero();
+        }
+    }
+
+    @Test
+    @DisplayName("every service exposes at least one documented API contract")
+    void everyServiceHasApiContracts() throws Exception {
+        Flyway flyway = migrate("catalog_contracts");
+
+        try (Connection connection = flyway.getConfiguration().getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM services s LEFT JOIN api_endpoints e ON e.service_id = s.id "
+                            + "WHERE e.id IS NULL"))
+                    .isZero();
+
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM api_endpoints WHERE service_id = 'srv-backstage'"))
+                    .isPositive();
+        }
     }
 
     @Test

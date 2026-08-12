@@ -415,6 +415,7 @@
 
               <div class="card-meta">
                 <span>Codeowner: <strong>{{ srv.ownerTeam }}</strong></span>
+                <span *ngIf="srv.contactChannel" style="color:#34d399;">Contact: {{ srv.contactChannel }}</span>
                 <span style="color:#818cf8; font-weight:600;">Inspect &rarr;</span>
               </div>
             </div>
@@ -1827,7 +1828,8 @@
 
       <div style="font-size:0.85rem; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--heroui-border); padding-top:16px; margin-bottom:20px;">
         <div><strong>Git Repository:</strong> <a [href]="selectedService()?.repositoryUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.repositoryUrl }}</a></div>
-        <div><strong>Codeowner Team:</strong> {{ selectedService()?.ownerTeam }}</div>
+        <div><strong>Codeowner Team:</strong> {{ selectedService()?.ownerTeam }}<span *ngIf="selectedService()?.contactChannel" style="color:#34d399;"> &middot; {{ selectedService()?.contactChannel }}</span></div>
+        <div *ngIf="selectedService()?.docsUrl"><strong>Tech Docs:</strong> <a [href]="selectedService()?.docsUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.docsUrl }}</a></div>
         <div><strong>Service Version:</strong> <code style="color:#34d399;">{{ selectedService()?.version || 'v1.0.0' }}</code></div>
       </div>
 
@@ -1837,6 +1839,16 @@
       </div>
       <div *ngIf="!selectedService()?.exposedApis || selectedService()?.exposedApis?.length === 0" style="color:var(--heroui-text-dim); font-size:0.85rem;">
         No public endpoints declared for this service.
+      </div>
+
+      <h4 style="margin:16px 0 10px; color:#a5b4fc; font-size:0.95rem;">Dependency Map</h4>
+      <div *ngFor="let dep of selectedService()?.dependencies" style="background:rgba(0,0,0,0.4); padding:10px 14px; border-radius:6px; margin-bottom:8px; font-family:var(--font-code); font-size:0.82rem;">
+        <span style="color:#fbbf24; font-weight:700;">{{ dep.type }}</span>
+        {{ dep.targetExternal || dep.targetServiceId }}
+        <span style="color:#94a3b8;">&middot; {{ dep.direction || 'DOWNSTREAM' }}</span>
+      </div>
+      <div *ngIf="!selectedService()?.dependencies || selectedService()?.dependencies?.length === 0" style="color:var(--heroui-text-dim); font-size:0.85rem;">
+        No dependencies mapped for this service.
       </div>
     </div>
   </div>

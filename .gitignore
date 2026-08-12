@@ -34,3 +34,4 @@ ai-consumer/.venv/
 
 # Jest
 frontend/test-results/
+frontend/coverage/
