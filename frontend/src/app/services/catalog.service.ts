@@ -30,6 +30,8 @@ export interface ServiceItem {
   contactChannel?: string;
   /** Technical documentation link (techdocs / runbook / ADRs). */
   docsUrl?: string;
+  /** Grafana / APM monitoring dashboard URL. */
+  grafanaUrl?: string;
   status: 'ACTIVE' | 'SCALING' | 'RESTARTING' | 'DEGRADED' | 'MAINTENANCE';
   techStack: 'SPRING_BOOT' | 'ANGULAR' | 'GO' | 'PYTHON';
   exposedApis: ApiEndpoint[];
@@ -161,6 +163,7 @@ export class CatalogService {
       ownerTeam: 'Equipe Paiement',
       contactChannel: '#pay-core',
       docsUrl: 'https://techdocs.company.internal/payment-gateway',
+      grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-payment',
       status: 'ACTIVE',
       techStack: 'SPRING_BOOT',
       replicas: 4,
@@ -190,6 +193,7 @@ export class CatalogService {
       ownerTeam: 'Equipe Catalogue',
       contactChannel: '#catalog-core',
       docsUrl: 'https://techdocs.company.internal/product-catalog',
+      grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-catalog',
       status: 'ACTIVE',
       techStack: 'GO',
       replicas: 3,
@@ -218,6 +222,7 @@ export class CatalogService {
       ownerTeam: 'Equipe Notifications',
       contactChannel: '#notifications-core',
       docsUrl: 'https://techdocs.company.internal/notification-dispatcher',
+      grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-notification',
       status: 'ACTIVE',
       techStack: 'PYTHON',
       replicas: 3,
@@ -246,6 +251,7 @@ export class CatalogService {
       ownerTeam: 'Equipe Platform',
       contactChannel: '#platform-infra',
       docsUrl: 'https://techdocs.company.internal/developer-portal',
+      grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-frontend-portal',
       status: 'ACTIVE',
       techStack: 'ANGULAR',
       replicas: 2,
@@ -272,6 +278,7 @@ export class CatalogService {
       ownerTeam: 'Equipe Securite',
       contactChannel: '#fraud-ai',
       docsUrl: 'https://techdocs.company.internal/fraud-ai-consumer',
+      grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-fraud-detector',
       status: 'ACTIVE',
       techStack: 'PYTHON',
       replicas: 4,

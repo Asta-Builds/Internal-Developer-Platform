@@ -89,6 +89,23 @@ idp:
   scaffold:
     artifact-dir: ${IDP_SCAFFOLD_ARTIFACT_DIR:./scaffold-artifacts}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
 logging:
   level:
     root: INFO

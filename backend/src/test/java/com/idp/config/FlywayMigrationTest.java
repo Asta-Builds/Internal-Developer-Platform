@@ -70,10 +70,11 @@ class FlywayMigrationTest {
             assertThat(count(statement, "SELECT COUNT(*) FROM services")).isEqualTo(10);
 
             // No service may be registered without an owning team, a contact
-            // channel and a technical documentation link.
+            // channel, a technical documentation link and a Grafana monitoring link.
             assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE owner_team IS NULL")).isZero();
             assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE contact_channel IS NULL")).isZero();
             assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE docs_url IS NULL")).isZero();
+            assertThat(count(statement, "SELECT COUNT(*) FROM services WHERE grafana_url IS NULL")).isZero();
         }
     }
 

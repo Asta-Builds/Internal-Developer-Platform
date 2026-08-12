@@ -30,6 +30,9 @@ public class ServiceEntity {
     /** Link to the service's technical documentation (runbook, ADRs, API guide). */
     private String docsUrl;
 
+    /** Link to the service's Grafana / APM monitoring dashboard. */
+    private String grafanaUrl;
+
     private String status; // ACTIVE, DEPRECATED, SCAFFOLDING
     private String techStack; // SPRING_BOOT, ANGULAR, PYTHON, GO
 

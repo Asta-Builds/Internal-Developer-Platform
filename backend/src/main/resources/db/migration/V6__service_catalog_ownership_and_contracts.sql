@@ -7,55 +7,66 @@
 --   3. services without registered endpoints (srv-backstage) get their contracts
 ALTER TABLE services ADD COLUMN contact_channel VARCHAR(255);
 ALTER TABLE services ADD COLUMN docs_url VARCHAR(500);
+ALTER TABLE services ADD COLUMN grafana_url VARCHAR(500);
 
 UPDATE services SET
   contact_channel = '#pay-core',
-  docs_url = 'https://techdocs.company.internal/payment-gateway'
+  docs_url = 'https://techdocs.company.internal/payment-gateway',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-payment'
 WHERE id = 'srv-payment';
 
 UPDATE services SET
   contact_channel = '#catalog-core',
-  docs_url = 'https://techdocs.company.internal/product-catalog'
+  docs_url = 'https://techdocs.company.internal/product-catalog',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-catalog'
 WHERE id = 'srv-catalog';
 
 UPDATE services SET
   contact_channel = '#notifications-core',
-  docs_url = 'https://techdocs.company.internal/notification-dispatcher'
+  docs_url = 'https://techdocs.company.internal/notification-dispatcher',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-notification'
 WHERE id = 'srv-notification';
 
 UPDATE services SET
   contact_channel = '#core-banking',
-  docs_url = 'https://techdocs.company.internal/petclinic'
+  docs_url = 'https://techdocs.company.internal/petclinic',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-petclinic'
 WHERE id = 'srv-petclinic';
 
 UPDATE services SET
   contact_channel = '#platform-infra',
-  docs_url = 'https://techdocs.company.internal/argocd-gitops'
+  docs_url = 'https://techdocs.company.internal/argocd-gitops',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-argocd'
 WHERE id = 'srv-argocd';
 
 UPDATE services SET
   contact_channel = '#platform-infra',
-  docs_url = 'https://techdocs.company.internal/kubernetes-platform'
+  docs_url = 'https://techdocs.company.internal/kubernetes-platform',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-k8s'
 WHERE id = 'srv-k8s';
 
 UPDATE services SET
   contact_channel = '#observability',
-  docs_url = 'https://techdocs.company.internal/prometheus-monitoring'
+  docs_url = 'https://techdocs.company.internal/prometheus-monitoring',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-prometheus'
 WHERE id = 'srv-prometheus';
 
 UPDATE services SET
   contact_channel = '#security-iam',
-  docs_url = 'https://techdocs.company.internal/keycloak-iam'
+  docs_url = 'https://techdocs.company.internal/keycloak-iam',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-auth'
 WHERE id = 'srv-auth';
 
 UPDATE services SET
   contact_channel = '#developer-experience',
-  docs_url = 'https://techdocs.company.internal/backstage-portal'
+  docs_url = 'https://techdocs.company.internal/backstage-portal',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-backstage'
 WHERE id = 'srv-backstage';
 
 UPDATE services SET
   contact_channel = '#observability',
-  docs_url = 'https://techdocs.company.internal/grafana-dashboards'
+  docs_url = 'https://techdocs.company.internal/grafana-dashboards',
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-grafana'
 WHERE id = 'srv-grafana';
 
 -- Dependency direction semantics: DOWNSTREAM (default) = the source service

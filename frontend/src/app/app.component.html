@@ -411,6 +411,15 @@
                 <button (click)="triggerHealthProbe(srv, $event)" class="btn-action-sm" title="Ping live health probe">
                   Ping
                 </button>
+
+                <a [href]="srv.grafanaUrl || ('https://grafana.company.internal/d/service-overview?var-service=' + srv.id)" target="_blank" (click)="$event.stopPropagation()" class="btn-action-sm" style="color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center; gap:3px;" title="Open Grafana / APM Dashboard">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                  Grafana
+                </a>
               </div>
 
               <div class="card-meta">
@@ -1840,6 +1849,17 @@
         <div><strong>Git Repository:</strong> <a [href]="selectedService()?.repositoryUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.repositoryUrl }}</a></div>
         <div><strong>Codeowner Team:</strong> {{ selectedService()?.ownerTeam }}<span *ngIf="selectedService()?.contactChannel" style="color:#34d399;"> &middot; {{ selectedService()?.contactChannel }}</span></div>
         <div *ngIf="selectedService()?.docsUrl"><strong>Tech Docs:</strong> <a [href]="selectedService()?.docsUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.docsUrl }}</a></div>
+        <div>
+          <strong>APM &amp; Grafana:</strong>
+          <a [href]="selectedService()?.grafanaUrl || ('https://grafana.company.internal/d/service-overview?var-service=' + selectedService()?.id)" target="_blank" style="color:#38bdf8; display:inline-flex; align-items:center; gap:4px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            Open Grafana Dashboard &rarr;
+          </a>
+        </div>
         <div><strong>Service Version:</strong> <code style="color:#34d399;">{{ selectedService()?.version || 'v1.0.0' }}</code></div>
       </div>
 
