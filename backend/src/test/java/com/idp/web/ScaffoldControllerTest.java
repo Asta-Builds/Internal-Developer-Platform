@@ -7,21 +7,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Scaffolding endpoints: initiation is 202 Accepted and streams produce SSE.
+ * Scaffolding endpoints: initiation is 202 Accepted, streams produce SSE, and artifacts can be downloaded.
  */
 @ExtendWith(MockitoExtension.class)
 class ScaffoldControllerTest {
@@ -75,6 +84,36 @@ class ScaffoldControllerTest {
         var response = controller.streamJobProgress("job-1");
 
         assertThat(response).isNotNull();
+    }
+
+    @Test
+    @DisplayName("downloads packaged artifact when present")
+    void downloadsArtifact(@TempDir Path tempDir) throws IOException {
+        Path artifact = tempDir.resolve("project.zip");
+        Files.writeString(artifact, "dummy-zip-content");
+
+        when(scaffoldingService.resolveArtifact("job-1")).thenReturn(Optional.of(artifact));
+
+        var response = controller.downloadArtifact("job-1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_OCTET_STREAM);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION))
+                .isEqualTo("attachment; filename=\"project.zip\"");
+        assertThat(response.getBody()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("downloadArtifact throws 404 NOT_FOUND when artifact is not ready")
+    void downloadsArtifactNotFound() {
+        when(scaffoldingService.resolveArtifact("job-1")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> controller.downloadArtifact("job-1"))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> {
+                    ResponseStatusException rse = (ResponseStatusException) e;
+                    assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+                });
     }
 
     @Test

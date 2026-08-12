@@ -650,6 +650,12 @@ export class CatalogService {
     return this.http.get<ScaffoldJob>(`${this.baseUrl}/scaffold/jobs/${jobId}`);
   }
 
+  downloadScaffoldArtifact(jobId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/scaffold/jobs/${jobId}/artifact`, {
+      responseType: 'blob'
+    });
+  }
+
   subscribeScaffoldStream(jobId: string): Observable<ScaffoldJob> {
     return new Observable(observer => {
       // Read through SseClient rather than EventSource: the endpoint requires a

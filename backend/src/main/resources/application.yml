@@ -86,6 +86,9 @@ idp:
     exchange: idp.direct.exchange
     routing-key: fraud.analysis.routing.key
 
+  scaffold:
+    artifact-dir: ${IDP_SCAFFOLD_ARTIFACT_DIR:./scaffold-artifacts}
+
 logging:
   level:
     root: INFO

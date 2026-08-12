@@ -1,0 +1,16 @@
+# Build
+target/
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Env & secrets
+.env
+.env.local
+
+# OS
+.DS_Store

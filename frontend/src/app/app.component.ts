@@ -513,6 +513,28 @@ export class AppComponent implements OnInit {
     this.isScaffoldingRunning.set(false);
   }
 
+  downloadScaffoldArtifact(): void {
+    const job = this.currentJob();
+    if (!job || !job.id) return;
+
+    this.catalogService.downloadScaffoldArtifact(job.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const filename = (this.scaffoldForm.name ? this.scaffoldForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'project') + '.zip';
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Failed to download scaffold artifact', err);
+      }
+    });
+  }
+
   submitScaffold(): void {
     if (!this.scaffoldForm.name) return;
 

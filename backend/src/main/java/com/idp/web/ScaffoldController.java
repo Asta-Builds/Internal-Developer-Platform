@@ -4,13 +4,18 @@ import com.idp.domain.ScaffoldJobEntity;
 import com.idp.dto.ScaffoldRequestDto;
 import com.idp.service.ScaffoldingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +46,18 @@ public class ScaffoldController {
     @PreAuthorize("hasPermission(#jobId, 'SCAFFOLD', 'READ')")
     public SseEmitter streamJobProgress(@PathVariable String jobId) {
         return scaffoldingService.subscribeJobStream(jobId);
+    }
+
+    @GetMapping("/jobs/{jobId}/artifact")
+    @PreAuthorize("hasPermission(#jobId, 'SCAFFOLD', 'READ')")
+    public ResponseEntity<Resource> downloadArtifact(@PathVariable String jobId) {
+        Path zip = scaffoldingService.resolveArtifact(jobId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artifact not ready"));
+        Resource resource = new FileSystemResource(zip);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + zip.getFileName() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     @GetMapping("/templates")

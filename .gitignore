@@ -35,3 +35,8 @@ ai-consumer/.venv/
 # Jest
 frontend/test-results/
 frontend/coverage/
+
+# Scaffolding artifacts
+scaffold-artifacts/
+backend/scaffold-artifacts/
+**/scaffold-artifacts/

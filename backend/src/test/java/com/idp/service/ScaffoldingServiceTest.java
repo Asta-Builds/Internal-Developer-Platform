@@ -1,22 +1,31 @@
 package com.idp.service;
 
+import com.idp.domain.ProjectEntity;
 import com.idp.domain.ScaffoldJobEntity;
+import com.idp.domain.ServiceEntity;
 import com.idp.dto.ScaffoldRequestDto;
 import com.idp.repository.ProjectRepository;
 import com.idp.repository.ScaffoldJobRepository;
 import com.idp.repository.ServiceRepository;
+import com.idp.scaffold.ScaffoldTemplateEngine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,8 +36,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * The asynchronous scaffolding engine: idempotent initiation, job tracking and the
- * SSE subscription surface.
+ * The asynchronous scaffolding engine: idempotent initiation, job tracking,
+ * output quality verification, artifact resolution and the SSE subscription surface.
  */
 @ExtendWith(MockitoExtension.class)
 class ScaffoldingServiceTest {
@@ -40,12 +49,15 @@ class ScaffoldingServiceTest {
     @Mock private IdempotencyService idempotencyService;
     @Mock private RabbitTemplate rabbitTemplate;
 
+    private final ScaffoldTemplateEngine templateEngine = new ScaffoldTemplateEngine();
+    private final Executor directExecutor = Runnable::run;
+
     private ScaffoldingService service;
 
     @BeforeEach
     void setUp() {
         service = new ScaffoldingService(projectRepository, scaffoldJobRepository, serviceRepository,
-                auditService, idempotencyService, rabbitTemplate);
+                auditService, idempotencyService, rabbitTemplate, templateEngine, directExecutor);
     }
 
     private ScaffoldRequestDto request() {
@@ -54,6 +66,8 @@ class ScaffoldingServiceTest {
                 .description("Payment backend")
                 .stackTemplate("SPRING_BOOT")
                 .ownerTeam("Equipe Paiement")
+                .enableCiCd(true)
+                .enablePostgres(true)
                 .build();
     }
 
@@ -74,6 +88,24 @@ class ScaffoldingServiceTest {
                 anyString(), anyString());
         verify(idempotencyService).storeResult("idem-key-1", job);
         verify(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Map.class));
+    }
+
+    @Test
+    @DisplayName("initiating with blank name throws IllegalArgumentException")
+    void blankNameThrows() {
+        ScaffoldRequestDto badReq = ScaffoldRequestDto.builder().name("  ").stackTemplate("SPRING_BOOT").build();
+        assertThatThrownBy(() -> service.initiateScaffold(badReq, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Project name is required");
+    }
+
+    @Test
+    @DisplayName("initiating with unknown stack template throws IllegalArgumentException")
+    void unknownStackThrows() {
+        ScaffoldRequestDto badReq = ScaffoldRequestDto.builder().name("Test").stackTemplate("RUBY_ON_RAILS").build();
+        assertThatThrownBy(() -> service.initiateScaffold(badReq, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unknown stack template");
     }
 
     @Test
@@ -125,5 +157,72 @@ class ScaffoldingServiceTest {
         ScaffoldJobEntity job = service.initiateScaffold(request(), null);
 
         assertThat(job.getId()).startsWith("job-");
+    }
+
+    @Test
+    @DisplayName("executing scaffolding pipeline generates real artifact, completes job and registers service in catalog")
+    void pipelineCompletesAndRegistersService(@TempDir Path tempDir) throws Exception {
+        ReflectionTestUtils.setField(service, "artifactDir", tempDir.toString());
+
+        String projectId = "proj-test-123";
+        String jobId = "job-test-456";
+
+        ProjectEntity project = ProjectEntity.builder()
+                .id(projectId)
+                .name("Order Service")
+                .description("Order processing backend")
+                .stackTemplate("SPRING_BOOT")
+                .repositoryUrl("https://github.com/enterprise-org/order-service")
+                .status("SCAFFOLDING")
+                .build();
+
+        ScaffoldJobEntity job = ScaffoldJobEntity.builder()
+                .id(jobId)
+                .projectId(projectId)
+                .status("RUNNING")
+                .progressPercent(10)
+                .stepLogs("")
+                .build();
+
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
+        when(scaffoldJobRepository.findById(jobId)).thenReturn(Optional.of(job));
+        when(scaffoldJobRepository.save(any(ScaffoldJobEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        ScaffoldRequestDto req = ScaffoldRequestDto.builder()
+                .name("Order Service")
+                .description("Order processing backend")
+                .stackTemplate("SPRING_BOOT")
+                .ownerTeam("Equipe Order")
+                .enableCiCd(true)
+                .enablePostgres(true)
+                .build();
+
+        // Run pipeline synchronously
+        service.executeScaffoldingPipelineAsync(projectId, jobId, req).get();
+
+        // Verify project completed
+        assertThat(project.getStatus()).isEqualTo("COMPLETED");
+        verify(projectRepository).save(project);
+
+        // Verify service registered in catalog
+        ArgumentCaptor<ServiceEntity> srvCaptor = ArgumentCaptor.forClass(ServiceEntity.class);
+        verify(serviceRepository).save(srvCaptor.capture());
+        ServiceEntity registered = srvCaptor.getValue();
+        assertThat(registered.getId()).isEqualTo("srv-order-service");
+        assertThat(registered.getName()).isEqualTo("Order Service");
+        assertThat(registered.getStatus()).isEqualTo("ACTIVE");
+
+        // Verify job state
+        assertThat(job.getStatus()).isEqualTo("COMPLETED");
+        assertThat(job.getProgressPercent()).isEqualTo(100);
+        assertThat(job.getStepLogs()).contains("Rendered");
+        assertThat(job.getStepLogs()).contains("deploy.yml");
+        assertThat(job.getStepLogs()).contains("Packaged");
+
+        // Verify artifact resolution
+        Optional<Path> artifactOpt = service.resolveArtifact(jobId);
+        assertThat(artifactOpt).isPresent();
+        assertThat(Files.exists(artifactOpt.get())).isTrue();
+        assertThat(artifactOpt.get().getFileName().toString()).isEqualTo("project.zip");
     }
 }

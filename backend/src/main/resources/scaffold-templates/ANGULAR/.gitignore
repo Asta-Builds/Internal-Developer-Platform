@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.angular/
+coverage/
+*.log
+
+# Env
+.env
+.env.local
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
