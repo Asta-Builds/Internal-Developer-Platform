@@ -93,6 +93,7 @@ export class AppComponent implements OnInit {
     }
   ]);
   isCopilotLoading = signal<boolean>(false);
+  isFloatingChatOpen = signal<boolean>(false);
 
   /**
    * Policy simulator state.
@@ -441,6 +442,8 @@ export class AppComponent implements OnInit {
       // Users and policies are ADMIN-only; the service surfaces a 403 as a notice
       // rather than an error, since a refusal is a legitimate outcome here.
       this.adminService.loadAll();
+    } else if (tab === 'copilot') {
+      this.catalogService.loadRagSources();
     }
   }
 
@@ -721,6 +724,29 @@ export class AppComponent implements OnInit {
         this.isCopilotLoading.set(false);
       }
     });
+  }
+
+  toggleFloatingChat(): void {
+    this.isFloatingChatOpen.set(!this.isFloatingChatOpen());
+  }
+
+  onSourceClick(source: string): void {
+    if (source.startsWith('http')) {
+      window.open(source, '_blank');
+      return;
+    }
+    const match = this.catalogService.servicesSignal().find(s => source.toLowerCase().includes(s.id.toLowerCase()));
+    if (match) {
+      this.openServiceDetail(match);
+      return;
+    }
+    if (source.includes('/api/')) {
+      this.setTab('catalog');
+    }
+  }
+
+  reindexKnowledgeBase(): void {
+    this.catalogService.ingestRag().subscribe();
   }
 
   // ================= GITHUB & RBAC =================

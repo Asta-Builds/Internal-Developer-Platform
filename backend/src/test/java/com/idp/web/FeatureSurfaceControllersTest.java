@@ -20,7 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Copilot, observability, devops, DLQ and enterprise status endpoints.
+ * Copilot, RAG, observability, devops, DLQ and enterprise status endpoints.
  */
 @ExtendWith(MockitoExtension.class)
 class FeatureSurfaceControllersTest {
@@ -29,6 +29,7 @@ class FeatureSurfaceControllersTest {
     @Mock private ObservabilityService observabilityService;
 
     private CopilotController copilotController;
+    private RagController ragController;
     private ObservabilityController observabilityController;
     private DevOpsController devOpsController;
     private EnterpriseController enterpriseController;
@@ -37,6 +38,7 @@ class FeatureSurfaceControllersTest {
     @BeforeEach
     void setUp() {
         copilotController = new CopilotController(copilotService);
+        ragController = new RagController(copilotService);
         observabilityController = new ObservabilityController(observabilityService);
         devOpsController = new DevOpsController(new DevOpsOperationsService());
 
@@ -64,6 +66,22 @@ class FeatureSurfaceControllersTest {
         when(copilotService.getSuggestedQuestions()).thenReturn(List.of("q1"));
 
         assertThat(copilotController.getSuggestedQuestions().getBody()).containsExactly("q1");
+    }
+
+    @Test
+    @DisplayName("rag endpoints query, list sources, ingest and stream")
+    void ragEndpoints() {
+        CopilotChatRequestDto request = CopilotChatRequestDto.builder().query("payment").build();
+        CopilotChatResponseDto response = CopilotChatResponseDto.builder()
+                .answer("answer").sources(List.of("src")).confidenceScore(0.9).build();
+        when(copilotService.processQuery(request)).thenReturn(response);
+        when(copilotService.getIndexedSources()).thenReturn(List.of(Map.of("id", "doc-1", "title", "Payment Specs")));
+        when(copilotService.reindexDocumentation(null)).thenReturn(Map.of("status", "INGESTION_COMPLETED"));
+
+        assertThat(ragController.query(request).getBody()).isEqualTo(response);
+        assertThat(ragController.getSources().getBody()).hasSize(1);
+        assertThat(ragController.ingest(null).getBody().get("status")).isEqualTo("INGESTION_COMPLETED");
+        assertThat(ragController.streamQuery("payment")).isNotNull();
     }
 
     @Test

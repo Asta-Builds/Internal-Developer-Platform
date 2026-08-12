@@ -116,6 +116,20 @@ class FlywayMigrationTest {
     }
 
     @Test
+    @DisplayName("pgvector knowledge base stores documentation and vector embeddings")
+    void pgVectorKnowledgeBaseStoresDocs() throws Exception {
+        Flyway flyway = migrate("catalog_rag");
+
+        try (Connection connection = flyway.getConfiguration().getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+
+            assertThat(count(statement, "SELECT COUNT(*) FROM rag_documents")).isGreaterThanOrEqualTo(5);
+            assertThat(count(statement, "SELECT COUNT(*) FROM rag_documents WHERE content IS NULL")).isZero();
+            assertThat(count(statement, "SELECT COUNT(*) FROM rag_documents WHERE doc_type IS NULL")).isZero();
+        }
+    }
+
+    @Test
     @DisplayName("every service exposes at least one documented API contract")
     void everyServiceHasApiContracts() throws Exception {
         Flyway flyway = migrate("catalog_contracts");

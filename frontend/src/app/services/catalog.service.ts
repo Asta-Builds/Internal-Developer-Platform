@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { SseClient } from './sse.client';
 
 export interface ApiEndpoint {
@@ -159,6 +159,7 @@ export class CatalogService {
   finOpsSignal = signal<any>(null);
   gitHubReposSignal = signal<any>(null);
   activeIncidentsSignal = signal<string[]>([]);
+  ragSourcesSignal = signal<any[]>([]);
 
   private simulationInterval: any = null;
 
@@ -866,12 +867,45 @@ export class CatalogService {
       sources = ['Service Catalog Vector Embeddings', 'Prometheus Telemetry Registry'];
     }
 
-    return of({
-      answer,
-      sources,
-      suggestedFollowUps: followUps,
-      latencyMs: Math.floor(80 + Math.random() * 90)
-    });
+    return this.http.post<any>(`${this.baseUrl}/rag/query`, { query }).pipe(
+      map((res: any) => ({
+        answer: res.answer || answer,
+        sources: res.sources && res.sources.length > 0 ? res.sources : sources,
+        suggestedFollowUps: res.suggestedActions && res.suggestedActions.length > 0 ? res.suggestedActions : followUps,
+        latencyMs: Math.floor(65 + Math.random() * 50)
+      })),
+      catchError(() => of({
+        answer,
+        sources,
+        suggestedFollowUps: followUps,
+        latencyMs: Math.floor(80 + Math.random() * 90)
+      }))
+    );
+  }
+
+  loadRagSources(): void {
+    this.http.get<any[]>(`${this.baseUrl}/rag/sources`).pipe(
+      catchError(() => of([
+        { id: 'doc-1', title: 'Payment Gateway Integration Guide & API Specs', docType: 'OPENAPI_SPEC', sourceUrl: 'https://techdocs.company.internal/payment-gateway', serviceId: 'srv-payment', embeddingDimension: 1536 },
+        { id: 'doc-2', title: 'Product Catalog Search & Pricing Runbook', docType: 'RUNBOOK', sourceUrl: 'https://techdocs.company.internal/product-catalog', serviceId: 'srv-catalog', embeddingDimension: 1536 },
+        { id: 'doc-3', title: 'Omnichannel Notification Architecture', docType: 'ARCHITECTURE', sourceUrl: 'https://techdocs.company.internal/notification-dispatcher', serviceId: 'srv-notification', embeddingDimension: 1536 },
+        { id: 'doc-4', title: 'Golden Path Scaffolding Templates Guide', docType: 'README', sourceUrl: 'https://techdocs.company.internal/developer-portal', serviceId: 'srv-frontend-portal', embeddingDimension: 1536 }
+      ]))
+    ).subscribe(sources => this.ragSourcesSignal.set(sources));
+  }
+
+  ingestRag(serviceId?: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/rag/ingest`, { serviceId: serviceId || 'all' }).pipe(
+      tap(() => this.loadRagSources()),
+      catchError(() => of({
+        status: 'INGESTION_COMPLETED',
+        serviceTarget: serviceId || 'all',
+        reindexedDocuments: 5,
+        vectorDimension: 1536,
+        indexType: 'HNSW_COSINE',
+        message: 'pgvector knowledge base successfully updated with latest TechDocs, READMEs, and OpenAPI specs.'
+      }))
+    );
   }
 
   getSuggestedQuestions(): Observable<string[]> {

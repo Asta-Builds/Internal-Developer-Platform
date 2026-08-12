@@ -53,9 +53,10 @@ CREATE INDEX IF NOT EXISTS idx_role_permissions_lookup
 
 -- VIEWER: read-only across the catalog and metrics.
 INSERT INTO role_permissions (id, role, resource_type, action, description) VALUES
-('rp-001', 'VIEWER', 'SERVICE',       'READ',   'Browse the service catalog'),
-('rp-002', 'VIEWER', 'OBSERVABILITY', 'READ',   'Read service health and metrics'),
-('rp-003', 'VIEWER', 'FEATURE_FLAG',  'READ',   'View feature flag state');
+('rp-001', 'VIEWER', 'SERVICE',       'READ',    'Browse the service catalog'),
+('rp-002', 'VIEWER', 'OBSERVABILITY', 'READ',    'Read service health and metrics'),
+('rp-003', 'VIEWER', 'FEATURE_FLAG',  'READ',    'View feature flag state'),
+('rp-004', 'VIEWER', 'COPILOT',       'READ',    'View indexed documentation sources');
 
 -- DEVELOPER: everything VIEWER has, plus scaffolding and own-team mutation.
 INSERT INTO role_permissions (id, role, resource_type, action, description) VALUES
@@ -71,7 +72,8 @@ INSERT INTO role_permissions (id, role, resource_type, action, description) VALU
 ('rp-019', 'DEVELOPER', 'FEATURE_FLAG',  'ROLLOUT', 'Advance canary rollout (bounded by ABAC)'),
 ('rp-020', 'DEVELOPER', 'COPILOT',       'EXECUTE', 'Query the IDP Copilot'),
 ('rp-021', 'DEVELOPER', 'GITHUB',        'READ',    'List connected repositories'),
-('rp-022', 'DEVELOPER', 'DEVOPS',        'READ',    'Read cluster and cost dashboards');
+('rp-022', 'DEVELOPER', 'DEVOPS',        'READ',    'Read cluster and cost dashboards'),
+('rp-023', 'DEVELOPER', 'COPILOT',       'READ',    'View indexed documentation sources');
 
 -- TECH_LEAD: everything DEVELOPER has, plus deletion, audit and RAG ingestion.
 INSERT INTO role_permissions (id, role, resource_type, action, description) VALUES
@@ -94,7 +96,8 @@ INSERT INTO role_permissions (id, role, resource_type, action, description) VALU
 ('rp-046', 'TECH_LEAD', 'GITHUB',        'READ',    'List connected repositories'),
 ('rp-047', 'TECH_LEAD', 'GITHUB',        'CREATE',  'Import a repository into the catalog'),
 ('rp-048', 'TECH_LEAD', 'DEVOPS',        'READ',    'Read cluster and cost dashboards'),
-('rp-049', 'TECH_LEAD', 'DEVOPS',        'EXECUTE', 'Trigger a CI/CD pipeline run');
+('rp-049', 'TECH_LEAD', 'DEVOPS',        'EXECUTE', 'Trigger a CI/CD pipeline run'),
+('rp-050', 'TECH_LEAD', 'COPILOT',       'READ',    'View indexed documentation sources');
 
 -- ADMIN: full surface, including the RBAC/ABAC administration itself.
 INSERT INTO role_permissions (id, role, resource_type, action, description) VALUES
@@ -119,7 +122,8 @@ INSERT INTO role_permissions (id, role, resource_type, action, description) VALU
 ('rp-078', 'ADMIN', 'DEVOPS',        'READ',    'Read cluster and cost dashboards'),
 ('rp-079', 'ADMIN', 'DEVOPS',        'EXECUTE', 'Trigger a CI/CD pipeline run'),
 ('rp-080', 'ADMIN', 'ADMIN',         'READ',    'Read users, roles and policies'),
-('rp-081', 'ADMIN', 'ADMIN',         'MANAGE',  'Edit the RBAC matrix and ABAC policies');
+('rp-081', 'ADMIN', 'ADMIN',         'MANAGE',  'Edit the RBAC matrix and ABAC policies'),
+('rp-082', 'ADMIN', 'COPILOT',       'READ',    'View indexed documentation sources');
 
 -- ---------------------------------------------------------------------------
 -- 4. ABAC: contextual rules layered on top of the RBAC grant.

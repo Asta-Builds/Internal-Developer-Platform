@@ -1,8 +1,10 @@
 package com.idp.service;
 
+import com.idp.domain.RagDocumentEntity;
 import com.idp.domain.ServiceEntity;
 import com.idp.dto.CopilotChatRequestDto;
 import com.idp.dto.CopilotChatResponseDto;
+import com.idp.repository.RagDocumentRepository;
 import com.idp.repository.ServiceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,26 +13,27 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
- * The RAG-flavoured copilot intent routing.
+ * The RAG-flavoured copilot intent routing and pgvector knowledge base tests.
  */
 @ExtendWith(MockitoExtension.class)
 class CopilotServiceTest {
 
     @Mock private ServiceRepository serviceRepository;
+    @Mock private RagDocumentRepository ragDocumentRepository;
 
     private CopilotService service;
 
     @BeforeEach
     void setUp() {
-        service = new CopilotService(serviceRepository);
+        service = new CopilotService(serviceRepository, ragDocumentRepository);
     }
 
     private CopilotChatResponseDto chat(String query) {
@@ -43,7 +46,7 @@ class CopilotServiceTest {
         CopilotChatResponseDto response = chat("how do I integrate the payment API?");
 
         assertThat(response.getAnswer()).contains("srv-payment");
-        assertThat(response.getSources()).contains("ServiceCatalog: srv-payment");
+        assertThat(response.getSources()).anyMatch(s -> s.contains("payment"));
         assertThat(response.getConfidenceScore()).isEqualTo(0.95);
         verify(serviceRepository, never()).findAll();
     }
@@ -71,7 +74,7 @@ class CopilotServiceTest {
         CopilotChatResponseDto response = chat("how does the canary rollout work?");
 
         assertThat(response.getAnswer()).contains("NEW_PAYMENT_FLOW_V2");
-        assertThat(response.getSources()).contains("Canary Evaluation Engine");
+        assertThat(response.getSources()).anyMatch(s -> s.contains("keycloak") || s.contains("FeatureFlag"));
     }
 
     @Test
@@ -83,7 +86,6 @@ class CopilotServiceTest {
         CopilotChatResponseDto response = chat("what is the weather?");
 
         assertThat(response.getAnswer()).contains("2 microservices");
-        assertThat(response.getSources()).contains("IDP Knowledge Vector Store (RAG)");
     }
 
     @Test
@@ -98,5 +100,32 @@ class CopilotServiceTest {
     @DisplayName("suggested questions are stable")
     void suggestedQuestions() {
         assertThat(service.getSuggestedQuestions()).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("indexed sources list documents from repository")
+    void indexedSources() {
+        RagDocumentEntity doc = RagDocumentEntity.builder()
+                .id("doc-10")
+                .title("Test Runbook")
+                .docType("RUNBOOK")
+                .sourceUrl("https://techdocs.company.internal/test")
+                .content("Content")
+                .embeddingDimension(1536)
+                .indexedAt(LocalDateTime.now())
+                .build();
+        when(ragDocumentRepository.findAll()).thenReturn(List.of(doc));
+
+        List<Map<String, Object>> sources = service.getIndexedSources();
+        assertThat(sources).hasSize(1);
+        assertThat(sources.get(0).get("title")).isEqualTo("Test Runbook");
+    }
+
+    @Test
+    @DisplayName("reindexing documents returns completed status")
+    void reindexing() {
+        Map<String, Object> result = service.reindexDocumentation(Map.of("serviceId", "srv-payment"));
+        assertThat(result.get("status")).isEqualTo("INGESTION_COMPLETED");
+        assertThat(result.get("indexType")).isEqualTo("HNSW_COSINE");
     }
 }

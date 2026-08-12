@@ -1232,10 +1232,18 @@
                 <div style="line-height:1.5; white-space:pre-wrap;">{{ msg.text }}</div>
 
                 <div *ngIf="msg.sources && msg.sources.length > 0" style="margin-top:12px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.75rem; color:#a5b4fc;">
-                  <strong>Verified Microservice Sources:</strong>
-                  <ul style="margin-left:16px; margin-top:4px;">
-                    <li *ngFor="let s of msg.sources">{{ s }}</li>
-                  </ul>
+                  <strong>Verified Knowledge Base Sources (Click to inspect):</strong>
+                  <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+                    <span *ngFor="let s of msg.sources" (click)="onSourceClick(s)"
+                          style="background:rgba(99, 102, 241, 0.15); color:#a5b4fc; border:1px solid rgba(99, 102, 241, 0.3); padding:3px 8px; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-family:var(--font-code);">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                      </svg>
+                      {{ s }}
+                    </span>
+                  </div>
                 </div>
 
                 <div *ngIf="msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
@@ -1253,7 +1261,7 @@
                 </svg>
               </div>
               <div class="bubble-content" style="color:var(--heroui-text-muted);">
-                Searching vector index and microservice catalog...
+                Searching pgvector knowledge base (1536d HNSW cosine index)...
               </div>
             </div>
           </div>
@@ -1267,6 +1275,62 @@
               </svg>
               Ask Copilot
             </button>
+          </div>
+        </div>
+
+        <!-- pgvector Knowledge Base Sources Management Panel -->
+        <div class="glass-panel" style="margin-top:28px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div>
+              <h3 style="font-family:var(--font-heading); font-size:1.15rem; margin:0 0 4px;">pgvector Knowledge Base Sources &amp; Embeddings</h3>
+              <p style="font-size:0.82rem; color:var(--heroui-text-muted); margin:0;">
+                1536-dimensional HNSW cosine vector index in PostgreSQL synchronizing READMEs, OpenAPI 3.0 contracts, and TechDocs
+              </p>
+            </div>
+            <button (click)="reindexKnowledgeBase()" class="btn btn-primary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+              </svg>
+              Trigger Document Re-indexing
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Doc ID</th>
+                  <th>Title &amp; Resource</th>
+                  <th>Type</th>
+                  <th>Linked Service</th>
+                  <th>Vector Dimensions</th>
+                  <th>Documentation URL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let doc of catalogService.ragSourcesSignal()">
+                  <td><code>{{ doc.id }}</code></td>
+                  <td><strong>{{ doc.title }}</strong></td>
+                  <td>
+                    <span class="tech-badge" style="background:rgba(99, 102, 241, 0.15); color:#a5b4fc; border-color:rgba(99, 102, 241, 0.3);">
+                      {{ doc.docType }}
+                    </span>
+                  </td>
+                  <td><code style="color:#34d399;">{{ doc.serviceId || 'GLOBAL' }}</code></td>
+                  <td><span style="color:#facc15; font-weight:700; font-size:0.78rem;">1536d (HNSW)</span></td>
+                  <td>
+                    <a [href]="doc.sourceUrl" target="_blank" style="color:#38bdf8; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px;">
+                      {{ doc.sourceUrl }}
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                      </svg>
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -2296,6 +2360,91 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ================= FLOATING IDP COPILOT / RAG CHAT WIDGET ================= -->
+  <div style="position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; align-items:flex-end;">
+    
+    <!-- Floating Chat Popup Window -->
+    <div *ngIf="isFloatingChatOpen()"
+         style="width:380px; height:520px; background:rgba(15, 23, 42, 0.96); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.12); border-radius:14px; box-shadow:0 20px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; margin-bottom:14px; overflow:hidden;">
+      
+      <!-- Widget Header -->
+      <div style="padding:14px 16px; background:rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:10px; height:10px; border-radius:50%; background:#34d399; box-shadow:0 0 8px #34d399;"></div>
+          <span style="font-weight:700; font-size:0.92rem; color:#f8fafc;">IDP Copilot RAG</span>
+          <span style="font-size:0.7rem; color:#a5b4fc; background:rgba(99,102,241,0.2); padding:1px 6px; border-radius:4px;">pgvector 1536d</span>
+        </div>
+        <button (click)="toggleFloatingChat()" style="background:none; border:none; color:#94a3b8; cursor:pointer; padding:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Widget Messages History -->
+      <div style="flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:12px; font-size:0.82rem;">
+        <div *ngFor="let msg of chatHistory()" style="display:flex; flex-direction:column;" [style.align-items]="msg.sender === 'USER' ? 'flex-end' : 'flex-start'">
+          <div [style.background]="msg.sender === 'USER' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)'"
+               [style.border]="msg.sender === 'USER' ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)'"
+               style="padding:10px 12px; border-radius:10px; max-width:88%; line-height:1.45; white-space:pre-wrap;">
+            {{ msg.text }}
+
+            <!-- Clickable Sources -->
+            <div *ngIf="msg.sources && msg.sources.length > 0" style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.72rem;">
+              <span style="color:#94a3b8;">Sources: </span>
+              <span *ngFor="let s of msg.sources" (click)="onSourceClick(s)"
+                    style="color:#a5b4fc; text-decoration:underline; cursor:pointer; margin-right:6px;">
+                {{ s }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="isCopilotLoading()" style="color:#94a3b8; font-size:0.75rem; font-style:italic;">
+          Searching pgvector knowledge base...
+        </div>
+      </div>
+
+      <!-- Quick Suggested Prompts -->
+      <div style="padding:6px 12px; display:flex; gap:6px; overflow-x:auto; background:rgba(0,0,0,0.2);">
+        <button (click)="sendCopilotQuery('How do I integrate Payment API?')" class="prompt-pill" style="font-size:0.7rem; padding:3px 8px; white-space:nowrap;">
+          💳 Payment API
+        </button>
+        <button (click)="sendCopilotQuery('What feature flags are active?')" class="prompt-pill" style="font-size:0.7rem; padding:3px 8px; white-space:nowrap;">
+          🚩 Feature Flags
+        </button>
+        <button (click)="sendCopilotQuery('Restart Payment Gateway')" class="prompt-pill" style="font-size:0.7rem; padding:3px 8px; white-space:nowrap;">
+          🔄 Restart Service
+        </button>
+      </div>
+
+      <!-- Input Row -->
+      <div style="padding:10px 12px; background:rgba(255,255,255,0.03); border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px;">
+        <input [(ngModel)]="chatInput" (keyup.enter)="sendCopilotQuery()" placeholder="Ask Copilot RAG..."
+               style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:6px 10px; border-radius:6px; font-size:0.8rem;" />
+        <button (click)="sendCopilotQuery()" [disabled]="!chatInput.trim()" class="btn btn-primary btn-sm" style="padding:6px 12px;">
+          Send
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Chat Trigger FAB Button -->
+    <button (click)="toggleFloatingChat()"
+            style="width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg, #6366f1, #3b82f6); border:none; color:#fff; box-shadow:0 8px 24px rgba(99,102,241,0.5); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
+            [style.transform]="isFloatingChatOpen() ? 'rotate(90deg)' : 'rotate(0deg)'">
+      <svg *ngIf="!isFloatingChatOpen()" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+        <polyline points="2 17 12 22 22 17"></polyline>
+        <polyline points="2 12 12 17 22 12"></polyline>
+      </svg>
+      <svg *ngIf="isFloatingChatOpen()" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
   </div>
 </div>
 
