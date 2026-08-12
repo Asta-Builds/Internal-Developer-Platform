@@ -8,65 +8,109 @@
 ALTER TABLE services ADD COLUMN contact_channel VARCHAR(255);
 ALTER TABLE services ADD COLUMN docs_url VARCHAR(500);
 ALTER TABLE services ADD COLUMN grafana_url VARCHAR(500);
+ALTER TABLE services ADD COLUMN slo_availability VARCHAR(100);
+ALTER TABLE services ADD COLUMN slo_latency_p95 VARCHAR(100);
+ALTER TABLE services ADD COLUMN escalation_policy VARCHAR(255);
+ALTER TABLE services ADD COLUMN scorecard_grade VARCHAR(32);
 
 UPDATE services SET
   contact_channel = '#pay-core',
   docs_url = 'https://techdocs.company.internal/payment-gateway',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-payment'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-payment',
+  slo_availability = '99.99% Availability (Error Budget: 4.3m/mo)',
+  slo_latency_p95 = '< 50ms p95, < 120ms p99',
+  escalation_policy = 'PagerDuty Tier-1 On-Call (P1 SLA: 5min, Secondary: #pay-oncall)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-payment';
 
 UPDATE services SET
   contact_channel = '#catalog-core',
   docs_url = 'https://techdocs.company.internal/product-catalog',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-catalog'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-catalog',
+  slo_availability = '99.95% Availability (Error Budget: 21.6m/mo)',
+  slo_latency_p95 = '< 30ms p95, < 80ms p99',
+  escalation_policy = 'Opsgenie Tier-2 On-Call (P1 SLA: 15min, Secondary: #catalog-core)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-catalog';
 
 UPDATE services SET
   contact_channel = '#notifications-core',
   docs_url = 'https://techdocs.company.internal/notification-dispatcher',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-notification'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-notification',
+  slo_availability = '99.90% Availability (Error Budget: 43.2m/mo)',
+  slo_latency_p95 = '< 150ms p95, < 300ms p99',
+  escalation_policy = 'Slack On-Call Alerting (#notifications-core, P1 SLA: 15min)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-notification';
 
 UPDATE services SET
   contact_channel = '#core-banking',
   docs_url = 'https://techdocs.company.internal/petclinic',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-petclinic'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-petclinic',
+  slo_availability = '99.90% Availability',
+  slo_latency_p95 = '< 100ms p95',
+  escalation_policy = 'Core Banking On-Call (#core-banking)',
+  scorecard_grade = 'SILVER'
 WHERE id = 'srv-petclinic';
 
 UPDATE services SET
   contact_channel = '#platform-infra',
   docs_url = 'https://techdocs.company.internal/argocd-gitops',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-argocd'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-argocd',
+  slo_availability = '99.99% Availability',
+  slo_latency_p95 = '< 20ms p95',
+  escalation_policy = 'Platform Infra SRE On-Call (#platform-infra)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-argocd';
 
 UPDATE services SET
   contact_channel = '#platform-infra',
   docs_url = 'https://techdocs.company.internal/kubernetes-platform',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-k8s'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-k8s',
+  slo_availability = '99.99% Availability',
+  slo_latency_p95 = '< 10ms p95',
+  escalation_policy = 'Platform Infra SRE On-Call (#platform-infra)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-k8s';
 
 UPDATE services SET
   contact_channel = '#observability',
   docs_url = 'https://techdocs.company.internal/prometheus-monitoring',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-prometheus'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-prometheus',
+  slo_availability = '99.95% Availability',
+  slo_latency_p95 = '< 50ms p95',
+  escalation_policy = 'Observability Team On-Call (#observability)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-prometheus';
 
 UPDATE services SET
   contact_channel = '#security-iam',
   docs_url = 'https://techdocs.company.internal/keycloak-iam',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-auth'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-auth',
+  slo_availability = '99.99% Availability',
+  slo_latency_p95 = '< 25ms p95',
+  escalation_policy = 'Security & IAM SRE (#security-iam, P1 SLA: 5min)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-auth';
 
 UPDATE services SET
   contact_channel = '#developer-experience',
   docs_url = 'https://techdocs.company.internal/backstage-portal',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-backstage'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-backstage',
+  slo_availability = '99.90% Availability',
+  slo_latency_p95 = '< 80ms p95',
+  escalation_policy = 'DevEx Team (#developer-experience)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-backstage';
 
 UPDATE services SET
   contact_channel = '#observability',
   docs_url = 'https://techdocs.company.internal/grafana-dashboards',
-  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-grafana'
+  grafana_url = 'https://grafana.company.internal/d/service-overview?var-service=srv-grafana',
+  slo_availability = '99.95% Availability',
+  slo_latency_p95 = '< 40ms p95',
+  escalation_policy = 'Observability Team (#observability)',
+  scorecard_grade = 'GOLD'
 WHERE id = 'srv-grafana';
 
 -- Dependency direction semantics: DOWNSTREAM (default) = the source service

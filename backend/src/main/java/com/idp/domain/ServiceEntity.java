@@ -33,6 +33,22 @@ public class ServiceEntity {
     /** Link to the service's Grafana / APM monitoring dashboard. */
     private String grafanaUrl;
 
+    /** Service Level Objective: Availability target and error budget. */
+    @Builder.Default
+    private String sloAvailability = "99.99% Availability";
+
+    /** Service Level Objective: Latency percentiles (e.g. p95, p99). */
+    @Builder.Default
+    private String sloLatencyP95 = "< 50ms p95";
+
+    /** Incident response escalation policy and on-call rotation routing. */
+    @Builder.Default
+    private String escalationPolicy = "Tier-1 SRE On-Call (P1 SLA: 5min)";
+
+    /** Production Readiness Scorecard grade: GOLD, SILVER, BRONZE. */
+    @Builder.Default
+    private String scorecardGrade = "GOLD";
+
     private String status; // ACTIVE, DEPRECATED, SCAFFOLDING
     private String techStack; // SPRING_BOOT, ANGULAR, PYTHON, GO
 

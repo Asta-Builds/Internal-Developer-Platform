@@ -32,6 +32,14 @@ export interface ServiceItem {
   docsUrl?: string;
   /** Grafana / APM monitoring dashboard URL. */
   grafanaUrl?: string;
+  /** Service Level Objective: Availability target and error budget. */
+  sloAvailability?: string;
+  /** Service Level Objective: Latency percentiles (e.g. p95, p99). */
+  sloLatencyP95?: string;
+  /** Incident response escalation policy and on-call rotation. */
+  escalationPolicy?: string;
+  /** Production Readiness Scorecard grade: GOLD, SILVER, BRONZE. */
+  scorecardGrade?: 'GOLD' | 'SILVER' | 'BRONZE';
   status: 'ACTIVE' | 'SCALING' | 'RESTARTING' | 'DEGRADED' | 'MAINTENANCE';
   techStack: 'SPRING_BOOT' | 'ANGULAR' | 'GO' | 'PYTHON';
   exposedApis: ApiEndpoint[];
@@ -164,6 +172,10 @@ export class CatalogService {
       contactChannel: '#pay-core',
       docsUrl: 'https://techdocs.company.internal/payment-gateway',
       grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-payment',
+      sloAvailability: '99.99% Availability (Error Budget: 4.3m/mo)',
+      sloLatencyP95: '< 50ms p95, < 120ms p99',
+      escalationPolicy: 'PagerDuty Tier-1 On-Call (P1 SLA: 5min, Secondary: #pay-oncall)',
+      scorecardGrade: 'GOLD',
       status: 'ACTIVE',
       techStack: 'SPRING_BOOT',
       replicas: 4,
@@ -194,6 +206,10 @@ export class CatalogService {
       contactChannel: '#catalog-core',
       docsUrl: 'https://techdocs.company.internal/product-catalog',
       grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-catalog',
+      sloAvailability: '99.95% Availability (Error Budget: 21.6m/mo)',
+      sloLatencyP95: '< 30ms p95, < 80ms p99',
+      escalationPolicy: 'Opsgenie Tier-2 On-Call (P1 SLA: 15min, Secondary: #catalog-core)',
+      scorecardGrade: 'GOLD',
       status: 'ACTIVE',
       techStack: 'GO',
       replicas: 3,
@@ -223,6 +239,10 @@ export class CatalogService {
       contactChannel: '#notifications-core',
       docsUrl: 'https://techdocs.company.internal/notification-dispatcher',
       grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-notification',
+      sloAvailability: '99.90% Availability (Error Budget: 43.2m/mo)',
+      sloLatencyP95: '< 150ms p95, < 300ms p99',
+      escalationPolicy: 'Slack On-Call Alerting (#notifications-core, P1 SLA: 15min)',
+      scorecardGrade: 'GOLD',
       status: 'ACTIVE',
       techStack: 'PYTHON',
       replicas: 3,
@@ -252,6 +272,10 @@ export class CatalogService {
       contactChannel: '#platform-infra',
       docsUrl: 'https://techdocs.company.internal/developer-portal',
       grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-frontend-portal',
+      sloAvailability: '99.95% Availability',
+      sloLatencyP95: '< 20ms p95',
+      escalationPolicy: 'Platform Infra SRE On-Call (#platform-infra)',
+      scorecardGrade: 'GOLD',
       status: 'ACTIVE',
       techStack: 'ANGULAR',
       replicas: 2,
@@ -279,6 +303,10 @@ export class CatalogService {
       contactChannel: '#fraud-ai',
       docsUrl: 'https://techdocs.company.internal/fraud-ai-consumer',
       grafanaUrl: 'https://grafana.company.internal/d/service-overview?var-service=srv-fraud-detector',
+      sloAvailability: '99.95% Availability',
+      sloLatencyP95: '< 25ms p95',
+      escalationPolicy: 'Security & IAM SRE (#security-iam, P1 SLA: 5min)',
+      scorecardGrade: 'GOLD',
       status: 'ACTIVE',
       techStack: 'PYTHON',
       replicas: 4,
