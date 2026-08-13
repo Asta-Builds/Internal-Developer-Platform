@@ -27,7 +27,21 @@ export interface KeycloakTokenResponse {
   providedIn: 'root'
 })
 export class KeycloakService {
-  private keycloakUrl = 'http://localhost:8180';
+  private getKeycloakUrl(): string {
+    if (typeof window !== 'undefined') {
+      if ((window as any).__IDP_CONFIG__?.keycloakUrl) {
+        return (window as any).__IDP_CONFIG__.keycloakUrl;
+      }
+      const hostname = window.location.hostname;
+      if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        const baseDomain = hostname.startsWith('idp.') ? hostname.substring(4) : hostname;
+        return `${window.location.protocol}//auth.${baseDomain}`;
+      }
+    }
+    return 'http://localhost:8180';
+  }
+
+  private keycloakUrl = this.getKeycloakUrl();
   private realm = 'idp-realm';
   private clientId = 'idp-frontend';
 

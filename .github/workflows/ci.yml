@@ -5,9 +5,9 @@ name: CI
 # integration branches.
 on:
   push:
-    branches: [main, pre-prod]
+    branches: [main, pre-prod, dev]
   pull_request:
-    branches: [main, pre-prod]
+    branches: [main, pre-prod, dev]
   workflow_dispatch:
 
 # A newer commit on the same ref makes the previous run irrelevant.

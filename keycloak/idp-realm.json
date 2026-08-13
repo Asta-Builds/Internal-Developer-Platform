@@ -106,11 +106,14 @@
       "redirectUris": [
         "http://localhost:4200/*",
         "http://localhost:4200",
-        "http://localhost:8088/*"
+        "http://localhost:8088/*",
+        "https://*/*",
+        "http://*/*"
       ],
       "webOrigins": [
         "+",
-        "http://localhost:4200"
+        "http://localhost:4200",
+        "*"
       ],
       "notBefore": 0,
       "bearerOnly": false,

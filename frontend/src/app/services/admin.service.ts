@@ -61,7 +61,13 @@ export interface SimulationResult {
 export class AdminService {
 
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:8088/api/v1';
+  private getBaseUrl(): string {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '4200') {
+      return 'http://localhost:8088/api/v1';
+    }
+    return '/api/v1';
+  }
+  private baseUrl = this.getBaseUrl();
 
   usersSignal = signal<PlatformUser[]>([]);
   policiesSignal = signal<AbacPolicy[]>([]);

@@ -1,0 +1,182 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL 16 with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: idp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-idpdb}
+      POSTGRES_USER: ${POSTGRES_USER:-idpuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-idppassword}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - idp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-idpuser} -d ${POSTGRES_DB:-idpdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis 7 High-Performance Distributed Caching Tier
+  redis:
+    image: redis:7-alpine
+    container_name: idp-redis
+    restart: unless-stopped
+    command: >
+      sh -c 'if [ -z "$${REDIS_PASSWORD}" ]; then
+        redis-server --appendonly yes;
+      else
+        redis-server --requirepass "$${REDIS_PASSWORD}" --appendonly yes;
+      fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - idp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 8s
+      timeout: 3s
+      retries: 5
+
+  # 3. RabbitMQ 3.13 Message Broker with Management Web Console
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: idp-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq_prod_data:/var/lib/rabbitmq
+    networks:
+      - idp-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. Keycloak IAM Service (OAuth2 / OIDC Authorization Server)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: idp-keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-adminpassword}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-idpdb}
+      KC_DB_USERNAME: ${POSTGRES_USER:-idpuser}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-idppassword}
+      KC_HOSTNAME: ${AUTH_DOMAIN:-auth.localhost}
+      KC_HTTP_PORT: 8180
+      KC_PROXY: "edge"
+    volumes:
+      - ./keycloak/idp-realm.json:/opt/keycloak/data/import/idp-realm.json:ro
+      - ./keycloak/theme:/opt/keycloak/themes:ro
+    networks:
+      - idp-network
+      - coolify
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.idp-keycloak.rule=Host(`${AUTH_DOMAIN:-auth.localhost}`)"
+      - "traefik.http.routers.idp-keycloak.entrypoints=https"
+      - "traefik.http.routers.idp-keycloak.tls=true"
+      - "traefik.http.routers.idp-keycloak.tls.certresolver=letsencrypt"
+      - "traefik.http.services.idp-keycloak.loadbalancer.server.port=8180"
+
+  # 5. FastAPI AI Microservice Consumer (Consumes from RabbitMQ)
+  idp-ai-consumer:
+    build:
+      context: ./ai-consumer
+      dockerfile: Dockerfile
+    container_name: idp-ai-consumer
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      INCOMING_QUEUE: fraud.analysis.queue
+      OUTGOING_QUEUE: fraud.result.queue
+      EXCHANGE_NAME: idp.direct.exchange
+    networks:
+      - idp-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  # 6. Spring Boot 3.2 Core API Backend (Producer & Orchestrator)
+  idp-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: idp-backend
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-idpdb}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-idpuser}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-idppassword}
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      IDP_SECURITY_ISSUER_URI: ${IDP_SECURITY_ISSUER_URI:-http://localhost:8180/realms/idp-realm}
+      IDP_SECURITY_JWK_SET_URI: ${IDP_SECURITY_JWK_SET_URI:-http://keycloak:8180/realms/idp-realm/protocol/openid-connect/certs}
+      IDP_SECURITY_AUTO_PROVISION: ${IDP_SECURITY_AUTO_PROVISION:-false}
+      IDP_SECURITY_CORS_ORIGINS: ${IDP_SECURITY_CORS_ORIGINS:-http://localhost:4200,http://localhost}
+    networks:
+      - idp-network
+      - coolify
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # 7. Angular 17 Standalone Web Portal UI (Proxies /api and /ai)
+  idp-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: idp-frontend
+    restart: unless-stopped
+    networks:
+      - idp-network
+      - coolify
+    depends_on:
+      - idp-backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.idp-frontend.rule=Host(`${APP_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.idp-frontend.entrypoints=https"
+      - "traefik.http.routers.idp-frontend.tls=true"
+      - "traefik.http.routers.idp-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.idp-frontend.loadbalancer.server.port=80"
+
+networks:
+  idp-network:
+    driver: bridge
+  coolify:
+    external: true
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+  rabbitmq_prod_data:

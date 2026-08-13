@@ -16,7 +16,7 @@ const API_ORIGIN = 'http://localhost:8088';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const keycloak = inject(KeycloakService);
 
-  const isBackendCall = req.url.startsWith(API_ORIGIN) || req.url.startsWith('/api/');
+  const isBackendCall = req.url.startsWith(API_ORIGIN) || req.url.startsWith('/api/') || req.url.includes('/api/');
   const token = keycloak.currentUserSignal().token;
 
   const outbound = isBackendCall && token

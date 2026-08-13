@@ -123,7 +123,13 @@ export interface BatchCanaryResult {
   providedIn: 'root'
 })
 export class CatalogService {
-  private baseUrl = 'http://localhost:8088/api/v1';
+  private getBaseUrl(): string {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '4200') {
+      return 'http://localhost:8088/api/v1';
+    }
+    return '/api/v1';
+  }
+  private baseUrl = this.getBaseUrl();
 
   /** Authenticated SSE transport; EventSource cannot attach the bearer token. */
   private sseClient = inject(SseClient);
