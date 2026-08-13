@@ -79,7 +79,7 @@ services:
       dockerfile: Dockerfile
     container_name: idp-ai-consumer
     ports:
-      - "8000:8000"
+      - "8008:8000"
     environment:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
