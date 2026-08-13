@@ -27,7 +27,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       if (isBackendCall && error.status === 401) {
         // The token was rejected: expired, or it maps to no active internal user.
-        keycloak.logout();
+        // Clear local state without redirecting the browser to prevent refresh loops.
+        keycloak.logout(false);
       }
       return throwError(() => error);
     })

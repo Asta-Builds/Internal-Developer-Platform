@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CatalogService, ServiceItem, ScaffoldJob, FeatureFlag, AuditLogEntry, CopilotChatResponse, LiveLogEvent, BatchCanaryResult } from './services/catalog.service';
@@ -409,11 +409,20 @@ export class AppComponent implements OnInit {
     public catalogService: CatalogService,
     public keycloakService: KeycloakService,
     public adminService: AdminService
-  ) {}
+  ) {
+    effect(() => {
+      if (this.isAuthenticated()) {
+        this.refreshAllData();
+        this.runBatchCanaryTest();
+      }
+    }, { allowSignalWrites: true });
+  }
 
   ngOnInit(): void {
-    this.refreshAllData();
-    this.runBatchCanaryTest();
+    if (this.isAuthenticated()) {
+      this.refreshAllData();
+      this.runBatchCanaryTest();
+    }
   }
 
   refreshAllData(): void {

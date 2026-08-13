@@ -269,10 +269,7 @@ export class KeycloakService {
    * the platform assigns the role.
    */
 
-  /**
-   * Logs out and terminates Keycloak session
-   */
-  logout(): void {
+  clearLocalSession(): void {
     localStorage.removeItem('idp_keycloak_user');
     sessionStorage.removeItem('pkce_code_verifier');
     this.currentUserSignal.set({
@@ -281,16 +278,25 @@ export class KeycloakService {
       roles: [],
       isAuthenticated: false
     });
+  }
+
+  /**
+   * Logs out and terminates Keycloak session
+   */
+  logout(redirect: boolean = true): void {
+    this.clearLocalSession();
     this.loginErrorSignal.set(null);
 
-    // Keycloak session termination
-    const redirectUri = window.location.origin + window.location.pathname;
-    const logoutUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/logout?client_id=${this.clientId}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
-    
-    try {
-      window.location.href = logoutUrl;
-    } catch {
-      window.location.reload();
+    if (redirect && typeof window !== 'undefined') {
+      // Keycloak session termination
+      const redirectUri = window.location.origin + window.location.pathname;
+      const logoutUrl = `${this.keycloakUrl}/realms/${this.realm}/protocol/openid-connect/logout?client_id=${this.clientId}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
+      
+      try {
+        window.location.href = logoutUrl;
+      } catch {
+        window.location.reload();
+      }
     }
   }
 
