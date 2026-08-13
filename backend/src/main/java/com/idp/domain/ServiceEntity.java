@@ -39,6 +39,7 @@ public class ServiceEntity {
 
     /** Service Level Objective: Latency percentiles (e.g. p95, p99). */
     @Builder.Default
+    @Column(name = "slo_latency_p95")
     private String sloLatencyP95 = "< 50ms p95";
 
     /** Incident response escalation policy and on-call rotation routing. */
