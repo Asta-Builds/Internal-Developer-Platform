@@ -56,10 +56,11 @@ services:
     networks:
       - idp-network
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
   # 4. Keycloak IAM Service (OAuth2 / OIDC Authorization Server)
   keycloak:
