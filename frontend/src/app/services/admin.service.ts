@@ -62,10 +62,13 @@ export class AdminService {
 
   private http = inject(HttpClient);
   private getBaseUrl(): string {
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '4200') {
-      return 'http://localhost:8088/api/v1';
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        return '/api/v1';
+      }
     }
-    return '/api/v1';
+    return 'http://localhost:8088/api/v1';
   }
   private baseUrl = this.getBaseUrl();
 
