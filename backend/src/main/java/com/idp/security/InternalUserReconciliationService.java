@@ -88,7 +88,7 @@ public class InternalUserReconciliationService {
                         "Valid Keycloak token presented by a principal with no internal user record");
                 return Optional.empty();
             }
-            user = provision(subject, username, jwt.getClaimAsString("email"));
+            user = provision(subject, username, jwt.getClaimAsString("email"), claimedRole);
         }
 
         if (!user.isActive()) {
@@ -106,20 +106,30 @@ public class InternalUserReconciliationService {
         return Optional.of(principal);
     }
 
-    private UserEntity provision(String subject, String username, String email) {
+    /**
+     * Always provisions at {@link #defaultRoleOnProvision}, never at the role the token
+     * asserts — honouring a claim here would let the IdP mint its own privileges, which
+     * is the one coupling this class exists to prevent. {@code claimedRole} is recorded
+     * in the audit entry so the gap between what Keycloak asserted and what the platform
+     * granted is visible from the first login onwards.
+     */
+    private UserEntity provision(String subject, String username, String email, Role claimedRole) {
+        Role role = Role.valueOf(defaultRoleOnProvision);
         UserEntity user = UserEntity.builder()
                 .id("usr-" + UUID.randomUUID().toString().substring(0, 8))
                 .username(username)
                 .email(email != null ? email : username + "@company.internal")
-                .role(Role.valueOf(defaultRoleOnProvision))
+                .role(role)
                 .keycloakSubject(subject)
                 .active(true)
                 .build();
 
         userRepository.save(user);
         auditService.logAction(user.getId() + " (" + username + ")", "USER_PROVISIONED", user.getId(),
-                "First login via Keycloak; provisioned with least-privilege role " + defaultRoleOnProvision);
-        log.info("[AUTHN] Provisioned internal user {} for Keycloak subject {}", user.getId(), subject);
+                "First login via Keycloak; provisioned with least-privilege role " + role.name()
+                        + "; token asserted " + (claimedRole != null ? claimedRole.name() : "no role"));
+        log.info("[AUTHN] Provisioned internal user {} with least-privilege role {} for Keycloak subject {} (token asserted {})",
+                user.getId(), role, subject, claimedRole);
         return user;
     }
 

@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -138,6 +137,22 @@ class InternalUserReconciliationServiceTest {
         assertThat(captor.getValue().getKeycloakSubject()).isEqualTo("sub-y");
         assertThat(captor.getValue().getEmail()).isEqualTo("newbie@company.internal");
         assertThat(captor.getValue().isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("provisions at least privilege even when the token asserts ADMIN")
+    void provisioningIgnoresClaimedRole() {
+        setAutoProvision(true);
+        when(userRepository.findByKeycloakSubject("sub-z")).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("escalator")).thenReturn(Optional.empty());
+
+        Optional<AuthenticatedUser> result = service.reconcile(jwt("sub-z", "escalator", null, "ADMIN"));
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getRole()).isEqualTo(Role.VIEWER);
+        ArgumentCaptor<UserEntity> captor = ArgumentCaptor.forClass(UserEntity.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getRole()).isEqualTo(Role.VIEWER);
     }
 
     @Test

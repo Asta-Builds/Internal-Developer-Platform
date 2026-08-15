@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { SseClient } from './sse.client';
 
 export interface ApiEndpoint {
@@ -743,29 +743,49 @@ export class CatalogService {
   }
 
   toggleFeatureFlag(id: string): Observable<FeatureFlag> {
+    const original = this.featureFlagsSignal().find(f => f.id === id);
     this.featureFlagsSignal.update(flags => flags.map(f => {
       if (f.id === id) {
         const nextState = !f.enabled;
-        this.addLog('INFO', 'FEATURE-FLAGS', `Toggled flag '${f.key}' -> ${nextState ? 'ENABLED' : 'DISABLED'}`);
+        this.addLog('INFO', 'FEATURE-FLAGS', `Toggling flag '${f.key}' -> ${nextState ? 'ENABLED' : 'DISABLED'}`);
         return { ...f, enabled: nextState };
       }
       return f;
     }));
     return this.http.patch<FeatureFlag>(`${this.baseUrl}/feature-flags/${id}/toggle`, {}).pipe(
-      catchError(() => of(this.featureFlagsSignal().find(f => f.id === id)!))
+      catchError(err => {
+        if (original) {
+          this.featureFlagsSignal.update(flags => flags.map(f => f.id === id ? original : f));
+        }
+        const errorMsg = err.status === 403
+          ? 'Permission denied: changing feature flags requires TECH_LEAD or ADMIN role.'
+          : (err.error?.detail || err.message || 'Failed to toggle feature flag');
+        this.addLog('ERROR', 'FEATURE-FLAGS', errorMsg);
+        return throwError(() => err);
+      })
     );
   }
 
   updateFeatureFlagRollout(id: string, rolloutPercent: number): Observable<FeatureFlag> {
+    const original = this.featureFlagsSignal().find(f => f.id === id);
     this.featureFlagsSignal.update(flags => flags.map(f => {
       if (f.id === id) {
-        this.addLog('INFO', 'FEATURE-FLAGS', `Updated canary rollout for '${f.key}' to ${rolloutPercent}%`);
+        this.addLog('INFO', 'FEATURE-FLAGS', `Updating canary rollout for '${f.key}' to ${rolloutPercent}%`);
         return { ...f, rolloutPercent };
       }
       return f;
     }));
     return this.http.patch<FeatureFlag>(`${this.baseUrl}/feature-flags/${id}/rollout`, { rolloutPercent }).pipe(
-      catchError(() => of(this.featureFlagsSignal().find(f => f.id === id)!))
+      catchError(err => {
+        if (original) {
+          this.featureFlagsSignal.update(flags => flags.map(f => f.id === id ? original : f));
+        }
+        const errorMsg = err.status === 403
+          ? 'Permission denied: changing canary rollout requires TECH_LEAD or ADMIN role.'
+          : (err.error?.detail || err.message || 'Failed to update canary rollout');
+        this.addLog('ERROR', 'FEATURE-FLAGS', errorMsg);
+        return throwError(() => err);
+      })
     );
   }
 

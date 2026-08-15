@@ -637,18 +637,25 @@ export class AppComponent implements OnInit {
   }
 
   // ================= FEATURE FLAGS & CANARY =================
+  // Both handlers below let the service own the optimistic update and its rollback.
+  // The canary preview is recomputed once the request settles — on a rejected change
+  // (403 from the ABAC engine) the flag reverts, so previewing the unconfirmed value
+  // would show a rollout that never happened.
   toggleFeatureFlag(flag: FeatureFlag): void {
     if (!flag.id) return;
-    this.catalogService.toggleFeatureFlag(flag.id).subscribe();
-    this.runBatchCanaryTest();
+    this.catalogService.toggleFeatureFlag(flag.id).subscribe({
+      next: () => this.runBatchCanaryTest(),
+      error: () => this.runBatchCanaryTest()
+    });
   }
 
   updateFlagRollout(flag: FeatureFlag, event: any): void {
     if (!flag.id) return;
     const value = Number(event.target.value);
-    flag.rolloutPercent = value;
-    this.catalogService.updateFeatureFlagRollout(flag.id, value).subscribe();
-    this.runBatchCanaryTest();
+    this.catalogService.updateFeatureFlagRollout(flag.id, value).subscribe({
+      next: () => this.runBatchCanaryTest(),
+      error: () => this.runBatchCanaryTest()
+    });
   }
 
   runCanaryTest(): void {
