@@ -1,57 +1,164 @@
 package com.idp.service;
 
 import com.idp.domain.RagDocumentEntity;
-import com.idp.domain.ServiceEntity;
 import com.idp.dto.CopilotChatRequestDto;
 import com.idp.dto.CopilotChatResponseDto;
+import com.idp.rag.ClaudeAnswerGenerator;
+import com.idp.rag.RagIngestionService;
+import com.idp.rag.RagRetrievalService;
+import com.idp.repository.RagChunkRepository;
 import com.idp.repository.RagDocumentRepository;
-import com.idp.repository.ServiceRepository;
+import com.idp.security.AuthenticatedUser;
+import com.idp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
+/**
+ * The IDP Copilot: answers questions from the platform's own indexed documentation.
+ *
+ * <p>The pipeline is retrieve → generate → cite. Every answer is grounded in chunks
+ * that were actually retrieved, and every cited source is one of them, so an answer
+ * can always be traced back to the document it came from.
+ *
+ * <p>Both halves degrade independently. With nothing indexed, the caller is told the
+ * corpus is empty rather than given a guess; with no Anthropic key configured,
+ * retrieval still runs and the passages are returned directly. Neither case
+ * fabricates platform detail.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CopilotService {
 
-    private final ServiceRepository serviceRepository;
     private final RagDocumentRepository ragDocumentRepository;
+    private final RagChunkRepository ragChunkRepository;
+    private final RagRetrievalService retrievalService;
+    private final ClaudeAnswerGenerator answerGenerator;
+    private final RagIngestionService ingestionService;
 
     public CopilotChatResponseDto processQuery(CopilotChatRequestDto request) {
-        String q = request.getQuery() != null ? request.getQuery().toLowerCase() : "";
-
-        String answer;
-        List<String> sources = new ArrayList<>();
-        List<String> actions = new ArrayList<>();
-        double confidence = 0.95;
-
-        if (q.contains("paiement") || q.contains("payment") || q.contains("charge") || q.contains("stripe")) {
-            answer = "Le service **Payment Gateway Service** (`srv-payment`) gère le traitement des cartes de crédit, remboursements et la compensation. Il expose l'API `POST /api/v1/payments/charge` et possède la Feature Flag `NEW_PAYMENT_FLOW_V2` (Canary Rollout 50%-75%).\n\nPropriétaire: **Équipe Paiement** | Tech Stack: **SPRING_BOOT**";
-            sources.addAll(List.of("https://techdocs.company.internal/payment-gateway", "/api/v1/payments/charge", "ServiceCatalog: srv-payment"));
-            actions.addAll(List.of("Consulter la spec OpenAPI /api/v1/payments/charge", "Ajuster le canary rollout de NEW_PAYMENT_FLOW_V2"));
-        } else if (q.contains("scaffold") || q.contains("créer") || q.contains("nouveau") || q.contains("template")) {
-            answer = "Pour générer un nouveau microservice via le **Scaffolder MVP**, vous pouvez soumettre une requête `POST /api/scaffold` avec les templates disponibles:\n- **SPRING_BOOT** (Java 17, Maven, JPA)\n- **ANGULAR** (Angular 17 Standalone, Signals)\n- **GO** (Gin Gonic, Dockerfile)\n- **PYTHON** (FastAPI, Pydantic)\n\nLe Scaffolder provisionne le dépôt Git, le squelette CI/CD et l'enregistre automatiquement dans le catalogue IDP.";
-            sources.addAll(List.of("https://techdocs.company.internal/developer-portal", "Template Registry: SPRING_BOOT / ANGULAR / GO"));
-            actions.addAll(List.of("Lancer un scaffolding Spring Boot", "Voir les builds CI/CD récents"));
-        } else if (q.contains("go") || q.contains("golang") || q.contains("notification")) {
-            answer = "Le microservice **Notification Dispatcher** (`srv-notification`) est développé en **GO**. Il prend en charge les envois SMS, Email et Push, et dépend de la Feature Flag `WHATSAPP_NOTIF_PROVIDER`.";
-            sources.addAll(List.of("https://techdocs.company.internal/notification-dispatcher", "ServiceCatalog: srv-notification"));
-            actions.addAll(List.of("Voir les dépendances de srv-notification", "Consulter l'endpoint /api/v1/notifications/send"));
-        } else if (q.contains("flag") || q.contains("canary") || q.contains("rollout")) {
-            answer = "Le moteur de **Feature Flags & Canary Release** évalue les règles par utilisateur avec l'algorithme de hachage `(userId + '_' + key).hashCode() % 100`. Trois flags sont actuellement configurés:\n1. `NEW_PAYMENT_FLOW_V2` (75% Rollout)\n2. `ELASTICSEARCH_SEARCH_V3` (0% Rollout)\n3. `WHATSAPP_NOTIF_PROVIDER` (10% Rollout)";
-            sources.addAll(List.of("https://techdocs.company.internal/keycloak-iam", "FeatureFlagRepository", "Canary Evaluation Engine"));
-            actions.addAll(List.of("Modifier le pourcentage de rollout", "Tester la résolution pour un user_id"));
-        } else {
-            List<ServiceEntity> allServices = serviceRepository.findAll();
-            answer = String.format("IDP Copilot a analysé le catalogue d'entreprise (%d microservices enregistrés) et l'index vectoriel pgvector. Vous pouvez poser des questions sur les contrats d'API, l'état de santé Prometheus, les templates de scaffolding ou l'évaluation des Feature Flags.", allServices.size());
-            sources.add("https://techdocs.company.internal/backstage-portal");
-            actions.addAll(List.of("Comment intégrer l'API de Paiement ?", "Quels sont les templates de scaffolding disponibles ?"));
+        String question = request != null ? request.getQuery() : null;
+        if (question == null || question.isBlank()) {
+            return response("Posez une question sur le catalogue, les APIs, les runbooks ou les feature flags.",
+                    List.of(), 0.0, getSuggestedQuestions());
         }
 
+        List<RagRetrievalService.RetrievedChunk> chunks = retrievalService.retrieve(question, visibleTeams());
+
+        if (chunks.isEmpty()) {
+            log.info("[RAG] No chunk passed the relevance threshold for query: {}", question);
+            return response(noMatchMessage(), List.of(), 0.0, getSuggestedQuestions());
+        }
+
+        List<String> sources = citations(chunks);
+        Optional<String> generated = answerGenerator.generate(question, chunks);
+
+        return response(
+                generated.orElseGet(() -> extractiveAnswer(chunks)),
+                sources,
+                // The top chunk's cosine score is the honest confidence signal: it is
+                // how close the best-matching passage actually was, not a constant.
+                chunks.get(0).score(),
+                followUpActions(chunks));
+    }
+
+    /**
+     * Teams whose documentation the caller may see.
+     *
+     * <p>An empty list means unrestricted. ADMIN and TECH_LEAD review the platform as
+     * a whole, so they are not scoped; everyone else sees their own team's documents
+     * plus the platform-wide ones that belong to no service.
+     */
+    private List<String> visibleTeams() {
+        Optional<AuthenticatedUser> user = CurrentUser.get();
+        if (user.isEmpty()) {
+            return List.of();
+        }
+        AuthenticatedUser principal = user.get();
+        if (principal.getRole() != null && principal.getRole().isAtLeast(com.idp.domain.Role.TECH_LEAD)) {
+            return List.of();
+        }
+        return principal.getTeam() != null ? List.of(principal.getTeam()) : List.of();
+    }
+
+    /** Distinct cited documents, in the order they were ranked. */
+    private List<String> citations(List<RagRetrievalService.RetrievedChunk> chunks) {
+        Set<String> seen = new LinkedHashSet<>();
+        for (RagRetrievalService.RetrievedChunk chunk : chunks) {
+            String url = chunk.sourceUrl();
+            seen.add(url != null && !url.isBlank()
+                    ? chunk.documentTitle() + " — " + url
+                    : chunk.documentTitle());
+        }
+        return List.copyOf(seen);
+    }
+
+    /**
+     * Fallback when generation is unavailable: hand back the best passage verbatim.
+     *
+     * <p>Quoting rather than paraphrasing is deliberate — without a model in the loop
+     * there is nothing that can safely rewrite the text, and a verbatim excerpt with
+     * its source attached is still a useful answer.
+     */
+    private String extractiveAnswer(List<RagRetrievalService.RetrievedChunk> chunks) {
+        RagRetrievalService.RetrievedChunk best = chunks.get(0);
+        StringBuilder answer = new StringBuilder();
+        answer.append("**").append(best.documentTitle()).append("**\n\n")
+                .append(best.content());
+        if (chunks.size() > 1) {
+            answer.append("\n\n_").append(chunks.size() - 1)
+                    .append(" autre(s) passage(s) pertinent(s) — voir les sources citées._");
+        }
+        if (!answerGenerator.isEnabled()) {
+            answer.append("\n\n> Génération désactivée (aucune clé API configurée) : "
+                    + "extrait de documentation renvoyé tel quel.");
+        }
+        return answer.toString();
+    }
+
+    private String noMatchMessage() {
+        long indexed = ragChunkRepository.count();
+        if (indexed == 0) {
+            return "La base de connaissances est vide. Lancez une indexation via "
+                    + "`POST /api/v1/rag/ingest` pour rendre la documentation interrogeable.";
+        }
+        return "Aucun passage pertinent trouvé dans la documentation indexée ("
+                + indexed + " extraits). Reformulez la question, ou indexez la "
+                + "documentation du service concerné.";
+    }
+
+    /** Concrete next steps drawn from what was actually retrieved. */
+    private List<String> followUpActions(List<RagRetrievalService.RetrievedChunk> chunks) {
+        List<String> actions = new ArrayList<>();
+        Set<String> services = new LinkedHashSet<>();
+        for (RagRetrievalService.RetrievedChunk chunk : chunks) {
+            if (chunk.serviceId() != null) {
+                services.add(chunk.serviceId());
+            }
+        }
+        for (String serviceId : services) {
+            actions.add("Voir la fiche catalogue de " + serviceId);
+            if (actions.size() >= 3) {
+                break;
+            }
+        }
+        if (actions.isEmpty()) {
+            actions.addAll(getSuggestedQuestions().subList(0, 2));
+        }
+        return actions;
+    }
+
+    private CopilotChatResponseDto response(String answer, List<String> sources,
+                                            double confidence, List<String> actions) {
         return CopilotChatResponseDto.builder()
                 .answer(answer)
                 .sources(sources)
@@ -71,48 +178,12 @@ public class CopilotService {
     }
 
     /**
-     * Lists indexed documentation sources in pgvector knowledge base.
+     * Lists indexed documentation sources, with how much of each is actually
+     * retrievable — a document with zero chunks is registered but not yet indexed,
+     * and the UI should be able to tell the difference.
      */
     public List<Map<String, Object>> getIndexedSources() {
-        List<RagDocumentEntity> docs = ragDocumentRepository.findAll();
-        if (docs.isEmpty()) {
-            return List.of(
-                    Map.of(
-                            "id", "doc-1",
-                            "title", "Payment Gateway Integration Guide & API Specs",
-                            "docType", "OPENAPI_SPEC",
-                            "sourceUrl", "https://techdocs.company.internal/payment-gateway",
-                            "serviceId", "srv-payment",
-                            "embeddingDimension", 1536
-                    ),
-                    Map.of(
-                            "id", "doc-2",
-                            "title", "Product Catalog Search & Pricing Runbook",
-                            "docType", "RUNBOOK",
-                            "sourceUrl", "https://techdocs.company.internal/product-catalog",
-                            "serviceId", "srv-catalog",
-                            "embeddingDimension", 1536
-                    ),
-                    Map.of(
-                            "id", "doc-3",
-                            "title", "Omnichannel Notification Architecture",
-                            "docType", "ARCHITECTURE",
-                            "sourceUrl", "https://techdocs.company.internal/notification-dispatcher",
-                            "serviceId", "srv-notification",
-                            "embeddingDimension", 1536
-                    ),
-                    Map.of(
-                            "id", "doc-4",
-                            "title", "Golden Path Scaffolding Templates Guide",
-                            "docType", "README",
-                            "sourceUrl", "https://techdocs.company.internal/developer-portal",
-                            "serviceId", "srv-frontend-portal",
-                            "embeddingDimension", 1536
-                    )
-            );
-        }
-
-        return docs.stream().map(doc -> {
+        return ragDocumentRepository.findAll().stream().map(doc -> {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("id", doc.getId());
             map.put("title", doc.getTitle());
@@ -121,25 +192,35 @@ public class CopilotService {
             map.put("serviceId", doc.getService() != null ? doc.getService().getId() : null);
             map.put("embeddingDimension", doc.getEmbeddingDimension());
             map.put("indexedAt", doc.getIndexedAt());
+            map.put("chunkCount", ragChunkRepository.countByDocument_Id(doc.getId()));
             return map;
         }).toList();
     }
 
-    /**
-     * Ingests or re-indexes documentation into pgvector embeddings store.
-     */
+    /** Chunks, embeds and stores documentation so it becomes retrievable. */
     public Map<String, Object> reindexDocumentation(Map<String, Object> payload) {
-        String serviceId = payload != null && payload.get("serviceId") != null ? String.valueOf(payload.get("serviceId")) : "all";
-        log.info("[RAG INGEST] Reindexing documentation for serviceId={}", serviceId);
+        String serviceId = payload != null && payload.get("serviceId") != null
+                ? String.valueOf(payload.get("serviceId"))
+                : null;
+        boolean force = payload != null && Boolean.parseBoolean(String.valueOf(payload.get("force")));
 
-        return Map.of(
-                "status", "INGESTION_COMPLETED",
-                "serviceTarget", serviceId,
-                "reindexedDocuments", 5,
-                "vectorDimension", 1536,
-                "indexType", "HNSW_COSINE",
-                "timestamp", System.currentTimeMillis(),
-                "message", "pgvector knowledge base successfully updated with latest TechDocs, READMEs, and OpenAPI specs."
-        );
+        RagIngestionService.IngestionReport report = ingestionService.ingest(serviceId, force);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "INGESTION_COMPLETED");
+        result.put("serviceTarget", serviceId == null ? "all" : serviceId);
+        result.put("documentsConsidered", report.documentsConsidered());
+        result.put("documentsIndexed", report.documentsIndexed());
+        result.put("documentsSkipped", report.documentsSkipped());
+        result.put("chunksWritten", report.chunksWritten());
+        result.put("embeddingModel", report.embeddingModel());
+        result.put("vectorDimension", report.embeddingDimension());
+        result.put("timestamp", System.currentTimeMillis());
+        return result;
+    }
+
+    /** Retained for callers that still resolve documents directly. */
+    public Optional<RagDocumentEntity> findDocument(String id) {
+        return ragDocumentRepository.findById(id);
     }
 }

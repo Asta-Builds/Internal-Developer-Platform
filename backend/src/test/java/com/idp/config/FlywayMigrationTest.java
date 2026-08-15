@@ -56,7 +56,56 @@ class FlywayMigrationTest {
 
         assertThat(result.success).isTrue();
         assertThat(result.migrations).extracting(m -> m.version)
-                .contains("1", "2", "3", "4", "5", "6");
+                .contains("1", "2", "3", "4", "5", "6", "7", "8");
+    }
+
+    @Test
+    @DisplayName("seeds the Keycloak personas with their platform roles and teams")
+    void seedsKeycloakPersonas() throws Exception {
+        Flyway flyway = migrate("keycloak_personas");
+
+        try (Connection connection = flyway.getConfiguration().getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+
+            // Every realm persona must resolve to an internal row, or logging in as
+            // that persona is refused (or silently downgraded to VIEWER).
+            for (String username : new String[] { "admin", "tech_lead", "developer", "viewer" }) {
+                assertThat(count(statement,
+                        "SELECT COUNT(*) FROM users WHERE username = '" + username + "' AND active = TRUE"))
+                        .as("internal row for Keycloak persona %s", username)
+                        .isEqualTo(1);
+            }
+
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM users WHERE username = 'tech_lead' AND role = 'TECH_LEAD'")).isEqualTo(1);
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM users WHERE username = 'developer' AND role = 'DEVELOPER'")).isEqualTo(1);
+            assertThat(count(statement,
+                    "SELECT COUNT(*) FROM users WHERE username = 'viewer' AND role = 'VIEWER'")).isEqualTo(1);
+        }
+    }
+
+    @Test
+    @DisplayName("V8 creates the chunk store the Copilot retrieves from")
+    void createsRagChunkStore() throws Exception {
+        Flyway flyway = migrate("rag_chunks");
+
+        try (Connection connection = flyway.getConfiguration().getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+
+            // Empty until ingestion runs, but the table and its FK must exist —
+            // and must be portable enough to apply on H2, which has no pgvector.
+            assertThat(count(statement, "SELECT COUNT(*) FROM rag_chunks")).isZero();
+
+            statement.execute("INSERT INTO rag_chunks "
+                    + "(id, document_id, chunk_index, content, embedding, embedding_dimension, source_hash, indexed_at) "
+                    + "VALUES ('c1', 'doc-1', 0, 'passage', '0.1,0.2', 2, 'hash', CURRENT_TIMESTAMP)");
+            assertThat(count(statement, "SELECT COUNT(*) FROM rag_chunks")).isEqualTo(1);
+
+            // Chunks die with their document rather than dangling.
+            statement.execute("DELETE FROM rag_documents WHERE id = 'doc-1'");
+            assertThat(count(statement, "SELECT COUNT(*) FROM rag_chunks")).isZero();
+        }
     }
 
     @Test
