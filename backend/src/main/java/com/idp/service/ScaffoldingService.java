@@ -57,6 +57,18 @@ public class ScaffoldingService {
     @Value("${idp.scaffold.artifact-dir:./scaffold-artifacts}")
     private String artifactDir;
 
+    /**
+     * Pause between pipeline steps, so the SSE progress stream is legible rather than
+     * completing faster than the UI can render it. Set to 0 to disable — tests do.
+     *
+     * <p>Read through {@code @Value} rather than {@code Long.getLong}, which resolves
+     * JVM system properties only: despite the Spring-style key, the previous form
+     * ignored application.yml and IDP_SCAFFOLD_STEP_DELAY_MS alike and always slept
+     * the default.
+     */
+    @Value("${idp.scaffold.step-delay-ms:800}")
+    private long stepDelayMs;
+
     // Active SSE Emitters for real-time streaming progress
     private final Map<String, List<SseEmitter>> jobEmitters = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -335,8 +347,11 @@ public class ScaffoldingService {
     }
 
     private void stepDelay() {
+        if (stepDelayMs <= 0) {
+            return;
+        }
         try {
-            Thread.sleep(Long.getLong("idp.scaffold.step-delay-ms", 800L));
+            Thread.sleep(stepDelayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
