@@ -1979,7 +1979,12 @@
       </div>
 
       <div style="font-size:0.85rem; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--heroui-border); padding-top:16px; margin-bottom:20px;">
-        <div><strong>Git Repository:</strong> <a [href]="selectedService()?.repositoryUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.repositoryUrl }}</a></div>
+        <div><strong>Git Repository:</strong>
+          <a *ngIf="selectedService()?.repositoryUrl" [href]="selectedService()?.repositoryUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.repositoryUrl }}</a>
+          <!-- A scaffolded service has no repository until the publish step runs, so
+               say that rather than rendering an empty link. -->
+          <span *ngIf="!selectedService()?.repositoryUrl" style="color:var(--heroui-text-muted, #94a3b8);">Not published &mdash; artifact download only</span>
+        </div>
         <div><strong>Codeowner Team:</strong> {{ selectedService()?.ownerTeam }}<span *ngIf="selectedService()?.contactChannel" style="color:#34d399;"> &middot; {{ selectedService()?.contactChannel }}</span></div>
         <div *ngIf="selectedService()?.docsUrl"><strong>Tech Docs:</strong> <a [href]="selectedService()?.docsUrl" target="_blank" style="color:#818cf8;">{{ selectedService()?.docsUrl }}</a></div>
         <div>

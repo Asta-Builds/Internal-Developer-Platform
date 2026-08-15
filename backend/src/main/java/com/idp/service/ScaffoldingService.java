@@ -7,6 +7,7 @@ import com.idp.dto.ScaffoldRequestDto;
 import com.idp.repository.ProjectRepository;
 import com.idp.repository.ScaffoldJobRepository;
 import com.idp.repository.ServiceRepository;
+import com.idp.scaffold.GitHubRepositoryPublisher;
 import com.idp.scaffold.ScaffoldTemplateEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,7 @@ public class ScaffoldingService {
     private final RabbitTemplate rabbitTemplate;
     private final ScaffoldTemplateEngine templateEngine;
     private final Executor scaffoldExecutor;
+    private final GitHubRepositoryPublisher gitHubPublisher;
 
     /** Where rendered projects and artifacts are kept. */
     @Value("${idp.scaffold.artifact-dir:./scaffold-artifacts}")
@@ -103,7 +105,10 @@ public class ScaffoldingService {
                 .stackTemplate(request.getStackTemplate())
                 .ownerTeam(request.getOwnerTeam())
                 .repositoryName(repoName)
-                .repositoryUrl("https://github.com/enterprise-org/" + repoName)
+                // Left unset on purpose: the URL is written once the repository has
+                // actually been created, in the publish step of the pipeline. Naming
+                // one here is what made the catalogue point at repositories that were
+                // never created.
                 .status("SCAFFOLDING")
                 .build();
 
@@ -231,16 +236,40 @@ public class ScaffoldingService {
             stepDelay();
             Path artifact = templateEngine.zip(projectDir, artifactRoot(jobId).resolve("project.zip"));
             long kb = Files.size(artifact) / 1024;
-            updateJob(jobId, 100, "Scaffolding completed successfully",
+            updateJob(jobId, 85, "Packaging artifact",
                     "[00:00:04] Packaged " + artifact.getFileName() + " (" + kb + " KB) - download via "
                             + "GET /api/v1/scaffold/jobs/" + jobId + "/artifact\n");
 
-            // 6. Complete Project
+            // 6. Publish to a real Git repository, when configured. The zip above is
+            // rendered from the same tree, so a project is downloadable whether or
+            // not publishing is switched on.
+            stepDelay();
             ProjectEntity project = projectRepository.findById(projectId).orElseThrow();
+            String repoName = project.getRepositoryName();
+            Optional<GitHubRepositoryPublisher.PublishedRepository> published =
+                    gitHubPublisher.publish(projectDir, repoName, request.getDescription(), "scaffolder");
+
+            if (published.isPresent()) {
+                project.setRepositoryUrl(published.get().htmlUrl());
+                updateJob(jobId, 100, "Scaffolding completed successfully",
+                        "[00:00:05] Published " + published.get().htmlUrl() + " (commit "
+                                + published.get().commitId().substring(0, 7) + " on "
+                                + published.get().branch() + ")\n");
+            } else {
+                // No repository URL is recorded: the catalogue entry says the project
+                // is unpublished rather than linking somewhere that does not exist.
+                updateJob(jobId, 100, "Scaffolding completed successfully",
+                        "[00:00:05] " + gitHubPublisher.disabledReason()
+                                + " - project not published; download the artifact instead\n");
+            }
+
+            // 7. Complete Project
             project.setStatus("COMPLETED");
             projectRepository.save(project);
 
-            // 7. Register as active Service in Service Catalog!
+            // 8. Register as active Service in Service Catalog. repositoryUrl is
+            // whatever the publish step established — a real URL, or null when the
+            // project was not published.
             String serviceId = "srv-" + sanitizeKebab(request.getName());
             ServiceEntity newService = ServiceEntity.builder()
                     .id(serviceId)

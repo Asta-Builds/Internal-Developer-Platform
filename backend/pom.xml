@@ -94,6 +94,16 @@
             <version>2.34.0</version>
         </dependency>
 
+        <!-- Golden path: publishing a scaffolded project to a real Git repository.
+             Repository creation goes through the GitHub REST API (RestClient, already
+             on the classpath); JGit does the commit and push. Off unless
+             idp.scaffold.github.enabled is set. -->
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit</artifactId>
+            <version>6.7.0.202309050840-r</version>
+        </dependency>
+
         <!-- Observability & Prometheus Metrics -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -24,7 +24,7 @@ export interface ServiceItem {
   id: string;
   name: string;
   description: string;
-  repositoryUrl: string;
+  repositoryUrl?: string;
   ownerTeam: string;
   /** Slack channel / on-call rotor for the owning team. */
   contactChannel?: string;

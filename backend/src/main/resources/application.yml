@@ -98,6 +98,22 @@ idp:
 
   scaffold:
     artifact-dir: ${IDP_SCAFFOLD_ARTIFACT_DIR:./scaffold-artifacts}
+    # Pause between pipeline steps so the SSE progress stream stays legible. 0 disables.
+    step-delay-ms: ${IDP_SCAFFOLD_STEP_DELAY_MS:800}
+    # Publishing a scaffolded project to a real repository. Off by default: creating
+    # repositories is outward-facing and hard to undo, so it must be switched on
+    # deliberately. With it off, the project is still rendered, quality-gated and
+    # packaged — it simply is not pushed, and no repository URL is recorded.
+    github:
+      enabled: ${IDP_SCAFFOLD_GITHUB_ENABLED:false}
+      # Fine-grained PAT with "Administration: read and write" (to create the repo)
+      # and "Contents: read and write" (to push) on the target owner.
+      token: ${IDP_SCAFFOLD_GITHUB_TOKEN:}
+      # Organisation to create under; blank creates under the token's own account.
+      org: ${IDP_SCAFFOLD_GITHUB_ORG:}
+      api-url: ${IDP_SCAFFOLD_GITHUB_API_URL:https://api.github.com}
+      private: ${IDP_SCAFFOLD_GITHUB_PRIVATE:true}
+      branch: ${IDP_SCAFFOLD_GITHUB_BRANCH:main}
 
 management:
   endpoints:

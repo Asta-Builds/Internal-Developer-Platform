@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +49,7 @@ class ScaffoldingServiceTest {
     @Mock private AuditService auditService;
     @Mock private IdempotencyService idempotencyService;
     @Mock private RabbitTemplate rabbitTemplate;
+    @Mock private com.idp.scaffold.GitHubRepositoryPublisher gitHubPublisher;
 
     private final ScaffoldTemplateEngine templateEngine = new ScaffoldTemplateEngine();
     private final Executor directExecutor = Runnable::run;
@@ -57,7 +59,10 @@ class ScaffoldingServiceTest {
     @BeforeEach
     void setUp() {
         service = new ScaffoldingService(projectRepository, scaffoldJobRepository, serviceRepository,
-                auditService, idempotencyService, rabbitTemplate, templateEngine, directExecutor);
+                auditService, idempotencyService, rabbitTemplate, templateEngine, directExecutor,
+                gitHubPublisher);
+        // Publishing off is the default posture; the tests that care switch it on.
+        ReflectionTestUtils.setField(service, "stepDelayMs", 0L);
     }
 
     private ScaffoldRequestDto request() {
@@ -172,7 +177,7 @@ class ScaffoldingServiceTest {
                 .name("Order Service")
                 .description("Order processing backend")
                 .stackTemplate("SPRING_BOOT")
-                .repositoryUrl("https://github.com/enterprise-org/order-service")
+                .repositoryName("order-service")
                 .status("SCAFFOLDING")
                 .build();
 
@@ -224,5 +229,54 @@ class ScaffoldingServiceTest {
         assertThat(artifactOpt).isPresent();
         assertThat(Files.exists(artifactOpt.get())).isTrue();
         assertThat(artifactOpt.get().getFileName().toString()).isEqualTo("project.zip");
+
+        // Publishing is off in this test, so the catalogue records no repository URL
+        // rather than a link to a repository nobody created.
+        assertThat(registered.getRepositoryUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("records the real repository URL once the project is published")
+    void publishedProjectCarriesItsRealRepositoryUrl(@TempDir Path tempDir) throws Exception {
+        ReflectionTestUtils.setField(service, "artifactDir", tempDir.toString());
+
+        String projectId = "proj-pub-1";
+        String jobId = "job-pub-1";
+
+        ProjectEntity project = ProjectEntity.builder()
+                .id(projectId).name("Order Service").description("Order processing backend")
+                .stackTemplate("SPRING_BOOT").repositoryName("order-service").status("SCAFFOLDING")
+                .build();
+        ScaffoldJobEntity job = ScaffoldJobEntity.builder()
+                .id(jobId).projectId(projectId).status("RUNNING").progressPercent(10).stepLogs("")
+                .build();
+
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
+        when(scaffoldJobRepository.findById(jobId)).thenReturn(Optional.of(job));
+        when(scaffoldJobRepository.save(any(ScaffoldJobEntity.class))).thenAnswer(i -> i.getArgument(0));
+        when(gitHubPublisher.publish(any(), eq("order-service"), any(), any()))
+                .thenReturn(Optional.of(new com.idp.scaffold.GitHubRepositoryPublisher.PublishedRepository(
+                        "https://github.com/platform-org/order-service",
+                        "https://github.com/platform-org/order-service.git",
+                        "abcdef1234567890", "main")));
+
+        ScaffoldRequestDto req = ScaffoldRequestDto.builder()
+                .name("Order Service").description("Order processing backend")
+                .stackTemplate("SPRING_BOOT").ownerTeam("Equipe Order")
+                .enableCiCd(true).enablePostgres(true)
+                .build();
+
+        service.executeScaffoldingPipelineAsync(projectId, jobId, req).get();
+
+        // The URL now comes from the repository that was actually created.
+        assertThat(project.getRepositoryUrl()).isEqualTo("https://github.com/platform-org/order-service");
+
+        ArgumentCaptor<ServiceEntity> srvCaptor = ArgumentCaptor.forClass(ServiceEntity.class);
+        verify(serviceRepository).save(srvCaptor.capture());
+        assertThat(srvCaptor.getValue().getRepositoryUrl())
+                .isEqualTo("https://github.com/platform-org/order-service");
+
+        assertThat(job.getStepLogs()).contains("Published https://github.com/platform-org/order-service");
+        assertThat(job.getStepLogs()).contains("abcdef1");
     }
 }
